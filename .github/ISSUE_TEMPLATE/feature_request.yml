@@ -1,0 +1,31 @@
+name: Feature Request
+description: Suggest a new theme, template, or feature
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the feature
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area?
+      options:
+        - Theme (new visual style)
+        - Template (new video layout)
+        - Alignment (word timing)
+        - Export (new output format)
+        - CLI (new command or flag)
+        - Performance
+        - Documentation
+        - Other

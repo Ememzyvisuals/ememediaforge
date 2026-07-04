@@ -1,0 +1,198 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# EmemediaForge — Full automated release pipeline
+#
+# Trigger:  git tag v1.0.0 && git push origin v1.0.0
+#
+# Pipeline:
+#   1. tests (all must pass)
+#   2. build dist/ (sdist + wheel)
+#   3. publish → TestPyPI  (verify install works)
+#   4. publish → PyPI      (OIDC trusted publisher — zero secrets)
+#   5. create GitHub Release with changelog + assets
+# ─────────────────────────────────────────────────────────────────────────────
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"          # v1.0.0  → full release to PyPI
+      - "v[0-9]+.[0-9]+.[0-9]+-*"        # v1.0.0-beta.1 → TestPyPI only
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false              # never cancel an in-flight release
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ── 1. Tests must pass before anything publishes ───────────────────────────
+  test:
+    name: Gate · Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: sudo apt-get install -y ffmpeg
+      - run: pip install -e ".[dev]"
+      - run: pytest tests/ -v --tb=short
+
+  # ── 2. Build sdist + wheel ─────────────────────────────────────────────────
+  build:
+    name: Build · sdist + wheel
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # full history needed for changelog
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Sync version tag → pyproject.toml
+        # Ensures the installed package version matches the git tag
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"   # strip leading 'v'
+          echo "Releasing version: $TAG"
+          sed -i "s/^version = .*/version = \"$TAG\"/" pyproject.toml
+          grep "^version" pyproject.toml
+
+      - name: Build
+        run: |
+          pip install build
+          python -m build
+
+      - name: Validate build
+        run: |
+          pip install twine
+          twine check dist/*
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  # ── 3. Publish to TestPyPI (all tags, including pre-releases) ─────────────
+  publish-testpypi:
+    name: Publish → TestPyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/ememediaforge
+    permissions:
+      id-token: write    # OIDC — no API token secret needed
+
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true   # idempotent — safe to re-run
+
+      - name: Smoke test install from TestPyPI
+        run: |
+          sleep 15   # give TestPyPI index time to update
+          pip install \
+            --index-url https://test.pypi.org/simple/ \
+            --extra-index-url https://pypi.org/simple/ \
+            ememediaforge
+          forge version
+
+  # ── 4. Publish to real PyPI (only for stable tags — no pre-release suffix) ─
+  publish-pypi:
+    name: Publish → PyPI
+    needs: publish-testpypi
+    if: "!contains(github.ref_name, '-')"   # skip v1.0.0-beta.1 etc.
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/ememediaforge
+    permissions:
+      id-token: write    # OIDC trusted publisher — zero secrets
+
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  # ── 5. GitHub Release with auto changelog + assets ─────────────────────────
+  github-release:
+    name: GitHub Release
+    needs: publish-pypi
+    if: "!contains(github.ref_name, '-')"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write    # needed to create releases
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for changelog
+
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Generate changelog from commits
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            LOG=$(git log --pretty=format:"- %s" | head -30)
+          else
+            LOG=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s")
+          fi
+
+          # Categorise by conventional commit prefix
+          FEAT=$(echo "$LOG" | grep -E "^- feat" | sed 's/^- feat[(:]/- ✨/')
+          FIX=$(echo "$LOG"  | grep -E "^- fix"  | sed 's/^- fix[(:]/- 🐛/')
+          DOCS=$(echo "$LOG" | grep -E "^- docs" | sed 's/^- docs[(:]/- 📚/')
+          OTHER=$(echo "$LOG"| grep -vE "^- (feat|fix|docs|chore|style|refactor|test|ci)" || true)
+
+          NOTES=""
+          [ -n "$FEAT"  ] && NOTES+="### ✨ New Features\n${FEAT}\n\n"
+          [ -n "$FIX"   ] && NOTES+="### 🐛 Bug Fixes\n${FIX}\n\n"
+          [ -n "$DOCS"  ] && NOTES+="### 📚 Documentation\n${DOCS}\n\n"
+          [ -n "$OTHER" ] && NOTES+="### 🔧 Other Changes\n${OTHER}\n\n"
+          [ -z "$NOTES" ] && NOTES="Initial release."
+
+          NOTES+="---\n**Install:** \`pip install ememediaforge==${GITHUB_REF_NAME#v}\`\n"
+          NOTES+="**Docs:** https://github.com/Ememzyvisuals/ememediaforge#readme"
+
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$NOTES"  >> $GITHUB_OUTPUT
+          echo "EOF"        >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "EmemediaForge ${{ github.ref_name }}"
+          body: ${{ steps.changelog.outputs.notes }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+          generate_release_notes: false

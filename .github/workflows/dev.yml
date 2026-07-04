@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# EmemediaForge — Dev branch: auto-publish pre-release to TestPyPI
+# Triggered by push to `develop` branch only
+# Lets you install the bleeding-edge build with:
+#   pip install --index-url https://test.pypi.org/simple/ ememediaforge
+# ─────────────────────────────────────────────────────────────────────────────
+name: Dev · TestPyPI pre-release
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "ememediaforge/**"
+      - "pyproject.toml"
+
+concurrency:
+  group: dev-testpypi
+  cancel-in-progress: true
+
+jobs:
+  pre-release:
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Stamp dev version (e.g. 1.0.0.dev20250702)
+        run: |
+          DATE=$(date +%Y%m%d%H%M)
+          # Read base version, append .devDATE
+          BASE=$(grep '^version' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          DEV_VER="${BASE}.dev${DATE}"
+          sed -i "s/^version = .*/version = \"$DEV_VER\"/" pyproject.toml
+          echo "Dev version: $DEV_VER"
+
+      - run: pip install build
+      - run: python -m build
+
+      - name: Publish dev build to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true

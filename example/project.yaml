@@ -1,0 +1,30 @@
+# EmemediaForge — NaijaVox Demo Example
+# Run: forge build project.yaml
+
+project:
+  name: NaijaVox 2.0
+  description: Multilingual Nigerian Speech Recognition
+  author: Axiveri
+  url: https://huggingface.co/Axiveri/NaijaVox-2.0
+
+theme: dark         # try also: modern | light | minimal
+template: stt
+logo: logo.png
+resolution: 1280x720
+fps: 30
+
+samples:
+  - title: Yoruba Sample
+    audio: samples/yoruba_sample.wav
+    transcript: samples/yoruba_sample.txt
+    language: yo
+
+  - title: Nigerian Pidgin
+    audio: samples/pidgin_sample.wav
+    transcript: samples/pidgin_sample.txt
+    language: pcm
+
+  - title: Hausa Sample
+    audio: samples/hausa_sample.wav
+    transcript: samples/hausa_sample.txt
+    language: ha

@@ -1,0 +1,86 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# EmemediaForge — CI: test every push and pull request
+# Runs across Python 3.10 / 3.11 / 3.12 on Ubuntu, macOS, Windows
+# ─────────────────────────────────────────────────────────────────────────────
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".github/ISSUE_TEMPLATE/**"
+  pull_request:
+    branches: [main, develop]
+
+# Cancel in-progress runs for the same branch (saves minutes)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test · Python ${{ matrix.python-version }} · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:             [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      # ── FFmpeg ─────────────────────────────────────────────────────────────
+      - name: Install FFmpeg (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install FFmpeg (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ffmpeg
+
+      - name: Install FFmpeg (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg -y
+
+      # ── Python deps ────────────────────────────────────────────────────────
+      - name: Install package + dev extras
+        run: pip install -e ".[dev]"
+
+      # ── Lint ───────────────────────────────────────────────────────────────
+      - name: Lint (ruff)
+        run: ruff check ememediaforge/
+
+      # ── Tests ──────────────────────────────────────────────────────────────
+      - name: Run tests
+        run: pytest tests/ -v --tb=short --cov=ememediaforge --cov-report=xml
+
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage.xml
+          flags: unittests
+          token: ${{ secrets.CODECOV_TOKEN }}   # optional — works without it
+
+  # ── Verify the package builds cleanly ──────────────────────────────────────
+  build-check:
+    name: Build check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install build twine
+      - run: python -m build
+      - run: twine check dist/*
