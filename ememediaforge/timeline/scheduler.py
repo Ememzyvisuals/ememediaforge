@@ -3,7 +3,7 @@ EmemediaForge — Timeline scheduler.
 Assembles scenes from project config into a VideoTimeline.
 """
 from __future__ import annotations
-from ememediaforge.config.schema import ProjectConfig, SampleConfig
+from ememediaforge.config.schema import ProjectConfig
 from ememediaforge.alignment.timestamps import WordTimestamp
 from ememediaforge.timeline.timeline import SceneSpec, VideoTimeline
 
