@@ -10,10 +10,8 @@ Font priority:
 
 from __future__ import annotations
 
-import os
 import urllib.request
 from pathlib import Path
-from typing import Optional
 
 from PIL import Image, ImageFont
 
@@ -29,16 +27,11 @@ _INTER_URLS = {
 
 _INTER_DIRECT = {
     "regular": (
-        "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/static/"
-        "Inter-Regular.ttf"
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/static/Inter-Regular.ttf"
     ),
-    "bold": (
-        "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/static/"
-        "Inter-Bold.ttf"
-    ),
+    "bold": ("https://raw.githubusercontent.com/google/fonts/main/ofl/inter/static/Inter-Bold.ttf"),
     "medium": (
-        "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/static/"
-        "Inter-Medium.ttf"
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/static/Inter-Medium.ttf"
     ),
 }
 
@@ -105,7 +98,7 @@ class FontManager:
             "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             "/System/Library/Fonts/Helvetica.ttc",  # macOS
-            "C:/Windows/Fonts/arial.ttf",            # Windows
+            "C:/Windows/Fonts/arial.ttf",  # Windows
         ]
         for p in system_paths:
             if Path(p).exists():
@@ -144,7 +137,7 @@ class FontManager:
         return success
 
 
-def load_logo(logo_path: Path, size: tuple[int, int] = (80, 80)) -> Optional[Image.Image]:
+def load_logo(logo_path: Path, size: tuple[int, int] = (80, 80)) -> Image.Image | None:
     """
     Load and resize a logo image.
 

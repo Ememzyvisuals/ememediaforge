@@ -1,4 +1,5 @@
 """EmemediaForge — Modern theme: white canvas, deep purple accent."""
+
 from ememediaforge.themes.base import Theme
 
 MODERN_THEME = Theme(

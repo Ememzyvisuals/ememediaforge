@@ -2,12 +2,15 @@
 EmemediaForge — Thumbnail generator.
 Renders the intro scene at T=0.9s as a static PNG thumbnail.
 """
+
 from __future__ import annotations
+
 from pathlib import Path
+
 from PIL import Image
 
-from ememediaforge.scenes.intro  import IntroScene
-from ememediaforge.themes.base   import Theme
+from ememediaforge.scenes.intro import IntroScene
+from ememediaforge.themes.base import Theme
 
 
 def generate_thumbnail(
@@ -42,7 +45,7 @@ def generate_thumbnail(
         url=url,
         duration=1.8,
     )
-    img = scene.render(local_t=0.9)   # midpoint of intro = fully faded in
+    img = scene.render(local_t=0.9)  # midpoint of intro = fully faded in
 
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)

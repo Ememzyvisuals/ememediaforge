@@ -1,26 +1,21 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # EmemediaForge — GitHub Release pipeline
 #
-# Trigger:
-#   git tag v1.0.1 && git push origin v1.0.1 --force
+# Trigger:  git tag v1.0.1 && git push origin v1.0.1 --force
 #
-# What it does:
-#   1. Runs the full test suite  (must pass — blocks everything else)
-#   2. Builds a wheel + source tarball
-#   3. Creates a GitHub Release with:
-#      - Auto-generated changelog from commits
-#      - .whl attached  → users can pip install directly from the URL
-#      - .tar.gz attached → raw source download
-#
-# NO PyPI. NO secrets. Just git tag + push.
+# Pipeline:
+#   1. Tests           — must pass, blocks everything else
+#   2. Build           — wheel + tarball, version synced from tag
+#   3. Build Demo      — generates NaijaVox 2.0 showcase video + thumbnail
+#   4. GitHub Release  — changelog + wheel + demo.mp4 + thumbnail all attached
 # ─────────────────────────────────────────────────────────────────────────────
 name: Release
 
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"       # v1.0.0  stable
-      - "v[0-9]+.[0-9]+.[0-9]+-*"     # v1.0.0-beta.1  pre-release
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 concurrency:
   group: release-${{ github.ref }}
@@ -30,9 +25,53 @@ env:
   PYTHON_VERSION: "3.11"
 
 jobs:
-  # ── 1. Tests must pass ─────────────────────────────────────────────────────
+  # ── 1. Tests ────────────────────────────────────────────────────────────────
   test:
     name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: sudo apt-get install -y ffmpeg
+      - run: pip install -e ".[dev]"
+      - run: pytest tests/ -v --tb=short
+
+  # ── 2. Build wheel + tarball ────────────────────────────────────────────────
+  build:
+    name: Build package
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Sync version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+          echo "Version: $VERSION"
+
+      - name: Build wheel + sdist
+        run: pip install build && python -m build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  # ── 3. Build NaijaVox 2.0 demo video ───────────────────────────────────────
+  build-demo:
+    name: Build NaijaVox 2.0 demo video
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,50 +84,32 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get install -y ffmpeg
 
-      - name: Install package + dev deps
-        run: pip install -e ".[dev]"
+      - name: Install EmemediaForge
+        run: pip install -e .
 
-      - name: Run tests
-        run: pytest tests/ -v --tb=short
+      - name: Generate synthetic audio samples
+        run: python3 demo/generate_audio.py
 
-  # ── 2. Build wheel + tarball ────────────────────────────────────────────────
-  build:
-    name: Build
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0     # full history for changelog
+      - name: Build demo video
+        run: forge build demo/project.yaml --output demo/dist
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-
-      - name: Sync version from git tag → pyproject.toml
+      - name: Verify outputs
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "Version: $VERSION"
-          sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+          echo "=== Demo outputs ==="
+          ls -lh demo/dist/
+          echo "Video duration:"
+          ffprobe -v quiet -show_entries format=duration \
+            -of default=noprint_wrappers=1:nokey=1 demo/dist/demo.mp4
 
-      - name: Build wheel + sdist
-        run: |
-          pip install build
-          python -m build
-          ls -lh dist/
-
-      - name: Upload dist artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: dist
-          path: dist/
-          retention-days: 7
+          name: demo
+          path: demo/dist/
 
-  # ── 3. GitHub Release with changelog + assets ───────────────────────────────
+  # ── 4. GitHub Release with changelog + wheel + demo video ──────────────────
   github-release:
     name: GitHub Release
-    needs: build
+    needs: [build, build-demo]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -104,10 +125,15 @@ jobs:
           name: dist
           path: dist/
 
+      - name: Download demo
+        uses: actions/download-artifact@v4
+        with:
+          name: demo
+          path: demo-dist/
+
       - name: Generate changelog
         id: changelog
         run: |
-          # Get all commits since last tag
           PREV=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           if [ -z "$PREV" ]; then
             COMMITS=$(git log --pretty=format:"- %s (%h)" | head -30)
@@ -115,32 +141,27 @@ jobs:
             COMMITS=$(git log ${PREV}..HEAD --pretty=format:"- %s (%h)")
           fi
 
-          # Split into categories by conventional commit prefix
-          FEAT=$(echo "$COMMITS"  | grep -E "^- feat"   | sed 's/^- feat[:(]/- ✨ /' || true)
-          FIX=$(echo "$COMMITS"   | grep -E "^- fix"    | sed 's/^- fix[:(]/- 🐛 /'  || true)
-          DOCS=$(echo "$COMMITS"  | grep -E "^- docs"   | sed 's/^- docs[:(]/- 📚 /' || true)
-          PERF=$(echo "$COMMITS"  | grep -E "^- perf"   | sed 's/^- perf[:(]/- ⚡ /' || true)
+          FEAT=$(echo "$COMMITS"  | grep -E "^- feat"  | sed 's/^- feat[:(]/- ✨ /'  || true)
+          FIX=$(echo "$COMMITS"   | grep -E "^- fix"   | sed 's/^- fix[:(]/- 🐛 /'   || true)
+          DOCS=$(echo "$COMMITS"  | grep -E "^- docs"  | sed 's/^- docs[:(]/- 📚 /'  || true)
+          PERF=$(echo "$COMMITS"  | grep -E "^- perf"  | sed 's/^- perf[:(]/- ⚡ /'  || true)
           OTHER=$(echo "$COMMITS" | grep -vE "^- (feat|fix|docs|perf|chore|ci|test|style|refactor)" || true)
 
-          VERSION="${GITHUB_REF_NAME#v}"
           WHEEL=$(ls dist/*.whl | head -1 | xargs basename)
-          TARBALL=$(ls dist/*.tar.gz | head -1 | xargs basename)
           REPO="${{ github.repository }}"
+          TAG="${{ github.ref_name }}"
 
-          NOTES="## Install\n\n"
-          NOTES+="**Option 1 — pip direct from this release** (no git required):\n"
+          NOTES="## 🎬 NaijaVox 2.0 Demo\n\n"
+          NOTES+="> Generated automatically by this release pipeline using \`forge build\`\n\n"
+          NOTES+="Download \`demo.mp4\` and \`thumbnail.png\` from the assets below.\n\n"
+          NOTES+="---\n\n"
+          NOTES+="## Install\n\n"
           NOTES+="\`\`\`bash\n"
-          NOTES+="pip install https://github.com/${REPO}/releases/download/${GITHUB_REF_NAME}/${WHEEL}\n"
-          NOTES+="\`\`\`\n\n"
-          NOTES+="**Option 2 — git clone** (recommended for development):\n"
-          NOTES+="\`\`\`bash\n"
+          NOTES+="# Option 1 — direct from this release\n"
+          NOTES+="pip install https://github.com/${REPO}/releases/download/${TAG}/${WHEEL}\n\n"
+          NOTES+="# Option 2 — git clone\n"
           NOTES+="git clone https://github.com/${REPO}.git\n"
-          NOTES+="cd ememediaforge\n"
-          NOTES+="pip install .\n"
-          NOTES+="\`\`\`\n\n"
-          NOTES+="**Option 3 — pip from git tag**:\n"
-          NOTES+="\`\`\`bash\n"
-          NOTES+="pip install git+https://github.com/${REPO}.git@${GITHUB_REF_NAME}\n"
+          NOTES+="cd ememediaforge && pip install .\n"
           NOTES+="\`\`\`\n\n"
           NOTES+="---\n\n## What's Changed\n\n"
           [ -n "$FEAT"  ] && NOTES+="### ✨ New Features\n${FEAT}\n\n"
@@ -149,8 +170,7 @@ jobs:
           [ -n "$PERF"  ] && NOTES+="### ⚡ Performance\n${PERF}\n\n"
           [ -n "$OTHER" ] && NOTES+="### 🔧 Other\n${OTHER}\n\n"
           [ -z "$FEAT$FIX$DOCS$PERF$OTHER" ] && NOTES+="Initial release.\n\n"
-          NOTES+="---\n"
-          NOTES+="Built by [@Ememzyvisuals](https://github.com/Ememzyvisuals) · Axiveri"
+          NOTES+="---\nBuilt by [@Ememzyvisuals](https://github.com/Ememzyvisuals) · Axiveri"
 
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo -e "$NOTES"  >> $GITHUB_OUTPUT
@@ -166,3 +186,6 @@ jobs:
           files: |
             dist/*.whl
             dist/*.tar.gz
+            demo-dist/demo.mp4
+            demo-dist/thumbnail.png
+            demo-dist/metadata.json

@@ -1,14 +1,13 @@
 """
 EmemediaForge — Abstract base scene + shared drawing utilities.
 """
+
 from __future__ import annotations
-import math
+
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional
 
-import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw
 
 from ememediaforge.assets.loader import FontManager, load_logo
 from ememediaforge.themes.base import Theme
@@ -33,7 +32,7 @@ class BaseScene(ABC):
 
     # ── Shared helpers ────────────────────────────────────────────────────────
 
-    def blank(self, color: Optional[tuple] = None) -> Image.Image:
+    def blank(self, color: tuple | None = None) -> Image.Image:
         """Create a blank canvas filled with the theme background color."""
         c = color or self.theme.bg_color
         return Image.new("RGB", (self.width, self.height), color=c)
@@ -45,7 +44,7 @@ class BaseScene(ABC):
         y: int,
         font,
         color: tuple,
-        x_override: Optional[int] = None,
+        x_override: int | None = None,
     ) -> tuple[int, int]:
         """Draw text centered horizontally. Returns (x, y) of drawn text."""
         bbox = draw.textbbox((0, 0), text, font=font)
@@ -57,7 +56,7 @@ class BaseScene(ABC):
     def draw_logo(
         self,
         img: Image.Image,
-        logo_path: Optional[str],
+        logo_path: str | None,
         cx: int,
         cy: int,
         size: int = 72,
@@ -95,13 +94,13 @@ class BaseScene(ABC):
         if n == 0:
             return
 
-        total_w   = x2 - x1
-        slot_w    = total_w / n
-        bar_w     = max(2, int(slot_w * 0.65))
-        center_y  = (y1 + y2) // 2
-        max_h     = ((y2 - y1) // 2) - 2
-        min_h     = 3
-        gap       = max(0, (slot_w - bar_w) // 2)
+        total_w = x2 - x1
+        slot_w = total_w / n
+        bar_w = max(2, int(slot_w * 0.65))
+        center_y = (y1 + y2) // 2
+        max_h = ((y2 - y1) // 2) - 2
+        min_h = 3
+        gap = max(0, (slot_w - bar_w) // 2)
 
         for i, amp in enumerate(amplitudes):
             bar_h = max(min_h, int(amp * max_h))
@@ -111,17 +110,19 @@ class BaseScene(ABC):
             # Glow: draw a slightly wider, dimmer bar behind
             r, g, b = self.theme.waveform_color
             glow_color = (r // 4, g // 4, b // 4)
-            draw.rectangle([bx1 - 1, center_y - bar_h - 2,
-                             bx2 + 1, center_y + bar_h + 2], fill=glow_color)
+            draw.rectangle(
+                [bx1 - 1, center_y - bar_h - 2, bx2 + 1, center_y + bar_h + 2], fill=glow_color
+            )
 
             # Main bar
-            draw.rectangle([bx1, center_y - bar_h, bx2, center_y + bar_h],
-                           fill=self.theme.waveform_color)
+            draw.rectangle(
+                [bx1, center_y - bar_h, bx2, center_y + bar_h], fill=self.theme.waveform_color
+            )
 
     def draw_karaoke(
         self,
         draw: ImageDraw.ImageDraw,
-        words: list,            # list[WordTimestamp]
+        words: list,  # list[WordTimestamp]
         local_t: float,
         rect: tuple[int, int, int, int],
         font_size: int = 36,
@@ -136,8 +137,8 @@ class BaseScene(ABC):
             return
 
         x1, y1, x2, y2 = rect
-        max_w  = x2 - x1 - 60
-        f_reg  = FontManager.get_font(font_size, "regular")
+        max_w = x2 - x1 - 60
+        f_reg = FontManager.get_font(font_size, "regular")
         f_bold = FontManager.get_font(font_size, "bold")
 
         # Build lines (word-wrap)
@@ -177,11 +178,11 @@ class BaseScene(ABC):
 
         # Sliding window: show 3 lines around active
         start_ln = max(0, active_line - 1)
-        visible  = lines[start_ln: start_ln + 3]
+        visible = lines[start_ln : start_ln + 3]
 
-        line_h    = int(font_size * 1.65)
-        total_h   = len(visible) * line_h
-        start_y   = (y1 + y2) // 2 - total_h // 2
+        line_h = int(font_size * 1.65)
+        total_h = len(visible) * line_h
+        start_y = (y1 + y2) // 2 - total_h // 2
 
         for li, ln in enumerate(visible):
             # Measure line to center it
@@ -190,13 +191,13 @@ class BaseScene(ABC):
             lb = draw.textbbox((0, 0), line_str, font=f_bold)
             line_px_w = lb[2] - lb[0]
             cx = (x1 + x2) // 2
-            x  = cx - line_px_w // 2
-            y  = start_y + li * line_h
+            x = cx - line_px_w // 2
+            y = start_y + li * line_h
 
             for wi, word in ln:
                 wt = words[wi]
-                is_active = (wi == active_idx)
-                is_past   = local_t >= wt.end
+                is_active = wi == active_idx
+                is_past = local_t >= wt.end
                 font = f_bold if is_active else f_reg
                 if is_active:
                     color = self.theme.word_active

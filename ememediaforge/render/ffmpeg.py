@@ -1,10 +1,13 @@
 """
 EmemediaForge — FFmpeg subprocess wrapper.
 """
+
 from __future__ import annotations
+
 import shutil
 import subprocess
 from pathlib import Path
+
 from ememediaforge.core.exceptions import FFmpegError
 
 
@@ -53,14 +56,21 @@ def build_video_cmd(
     ffmpeg = check_ffmpeg()
 
     cmd = [
-        ffmpeg, "-y",
+        ffmpeg,
+        "-y",
         # Video input from stdin (raw RGB24)
-        "-f", "rawvideo",
-        "-vcodec", "rawvideo",
-        "-s", f"{width}x{height}",
-        "-pix_fmt", "rgb24",
-        "-r", str(fps),
-        "-i", "pipe:0",
+        "-f",
+        "rawvideo",
+        "-vcodec",
+        "rawvideo",
+        "-s",
+        f"{width}x{height}",
+        "-pix_fmt",
+        "rgb24",
+        "-r",
+        str(fps),
+        "-i",
+        "pipe:0",
     ]
 
     # Add audio inputs
@@ -72,33 +82,44 @@ def build_video_cmd(
         filter_parts: list[str] = []
         for i, (_, start_t) in enumerate(audio_timings):
             delay_ms = int(start_t * 1000)
-            filter_parts.append(
-                f"[{i + 1}:a]adelay={delay_ms}|{delay_ms},apad[a{i}]"
-            )
+            filter_parts.append(f"[{i + 1}:a]adelay={delay_ms}|{delay_ms},apad[a{i}]")
         n = len(audio_timings)
-        mix_in  = "".join(f"[a{i}]" for i in range(n))
-        filter_parts.append(
-            f"{mix_in}amix=inputs={n}:normalize=0:dropout_transition=0[aout]"
+        mix_in = "".join(f"[a{i}]" for i in range(n))
+        filter_parts.append(f"{mix_in}amix=inputs={n}:normalize=0:dropout_transition=0[aout]")
+        cmd.extend(
+            [
+                "-filter_complex",
+                ";".join(filter_parts),
+                "-map",
+                "0:v",
+                "-map",
+                "[aout]",
+            ]
         )
-        cmd.extend([
-            "-filter_complex", ";".join(filter_parts),
-            "-map", "0:v",
-            "-map", "[aout]",
-        ])
     else:
         cmd.extend(["-map", "0:v"])
 
-    cmd.extend([
-        "-c:v", "libx264",
-        "-preset", "fast",
-        "-crf", "18",
-        "-pix_fmt", "yuv420p",
-        "-c:a", "aac",
-        "-b:a", "192k",
-        "-ar", "44100",
-        "-movflags", "+faststart",
-        str(output_path),
-    ])
+    cmd.extend(
+        [
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "18",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-ar",
+            "44100",
+            "-movflags",
+            "+faststart",
+            str(output_path),
+        ]
+    )
 
     return cmd
 
@@ -115,10 +136,10 @@ class FFmpegEncoder:
     """
 
     def __init__(self, cmd: list[str]):
-        self.cmd  = cmd
+        self.cmd = cmd
         self._proc: subprocess.Popen | None = None
 
-    def __enter__(self) -> "FFmpegEncoder":
+    def __enter__(self) -> FFmpegEncoder:
         self._proc = subprocess.Popen(
             self.cmd,
             stdin=subprocess.PIPE,
@@ -132,7 +153,9 @@ class FFmpegEncoder:
             try:
                 self._proc.stdin.write(frame_bytes)
             except BrokenPipeError as e:
-                stderr = self._proc.stderr.read().decode(errors="replace") if self._proc.stderr else ""
+                stderr = (
+                    self._proc.stderr.read().decode(errors="replace") if self._proc.stderr else ""
+                )
                 raise FFmpegError(f"FFmpeg pipe broken:\n{stderr}") from e
 
     def __exit__(self, *_) -> None:
@@ -142,7 +165,7 @@ class FFmpegEncoder:
             self._proc.stdin.close()
         self._proc.wait()
         if self._proc.returncode != 0:
-            stderr = (self._proc.stderr.read() if self._proc.stderr else b"").decode(errors="replace")
-            raise FFmpegError(
-                f"FFmpeg exited with code {self._proc.returncode}:\n{stderr}"
+            stderr = (self._proc.stderr.read() if self._proc.stderr else b"").decode(
+                errors="replace"
             )
+            raise FFmpegError(f"FFmpeg exited with code {self._proc.returncode}:\n{stderr}")

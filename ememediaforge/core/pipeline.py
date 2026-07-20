@@ -11,27 +11,25 @@ Execution order:
   7  Generate thumbnail PNG
   8  Write metadata JSON
 """
+
 from __future__ import annotations
 
 import time
-from pathlib import Path
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
-from ememediaforge.config.schema   import ProjectConfig
-from ememediaforge.config.loader   import validate_assets_exist
-from ememediaforge.audio.analyzer  import get_duration
 from ememediaforge.alignment.aligner import align
-from ememediaforge.timeline.scheduler import build_timeline
-from ememediaforge.themes.base     import get_theme
-from ememediaforge.exporters.mp4   import export_mp4
+from ememediaforge.audio.analyzer import get_duration
+from ememediaforge.config.loader import validate_assets_exist
+from ememediaforge.config.schema import ProjectConfig
+from ememediaforge.core.exceptions import AssetNotFoundError
+from ememediaforge.exporters.metadata import export_metadata
+from ememediaforge.exporters.mp4 import export_mp4
 from ememediaforge.exporters.thumbnail import generate_thumbnail
-from ememediaforge.exporters.metadata  import export_metadata
-from ememediaforge.core.exceptions import (
-    AssetNotFoundError, ForgeError
-)
+from ememediaforge.themes.base import get_theme
+from ememediaforge.timeline.scheduler import build_timeline
 
 console = Console()
 
@@ -39,7 +37,7 @@ console = Console()
 def run_pipeline(
     config: ProjectConfig,
     use_stable_ts: bool = False,
-    on_progress: Optional[Callable[[int, int], None]] = None,
+    on_progress: Callable[[int, int], None] | None = None,
 ) -> dict:
     """
     Run the full EmemediaForge build pipeline.
@@ -60,15 +58,14 @@ def run_pipeline(
     console.print("[bold cyan]  Checking assets…[/]")
     errors = validate_assets_exist(config)
     if errors:
-        raise AssetNotFoundError(
-            "Missing assets:\n" + "\n".join(f"  • {e}" for e in errors)
-        )
+        raise AssetNotFoundError("Missing assets:\n" + "\n".join(f"  • {e}" for e in errors))
 
     # ── Step 2: Theme ────────────────────────────────────────────────────────
     theme = get_theme(config.theme)
     width, height = config.get_resolution_tuple()
-    console.print(f"  Theme: [bold]{theme.name}[/]  |  "
-                  f"Resolution: {width}×{height}  |  FPS: {config.fps}")
+    console.print(
+        f"  Theme: [bold]{theme.name}[/]  |  Resolution: {width}×{height}  |  FPS: {config.fps}"
+    )
 
     # ── Step 3: Audio durations ──────────────────────────────────────────────
     console.print("[bold cyan]  Loading audio…[/]")
@@ -76,7 +73,7 @@ def run_pipeline(
     for i, sample in enumerate(config.samples):
         dur = get_duration(sample.audio)
         sample_durations[i] = dur
-        console.print(f"    [{i+1}] {sample.title}: {dur:.2f}s")
+        console.print(f"    [{i + 1}] {sample.title}: {dur:.2f}s")
 
     # ── Step 4: Word alignment ───────────────────────────────────────────────
     console.print("[bold cyan]  Aligning transcripts…[/]")
@@ -89,15 +86,14 @@ def run_pipeline(
             use_stable_ts=use_stable_ts,
         )
         sample_words[i] = words
-        console.print(f"    [{i+1}] {sample.title}: {len(words)} words aligned")
+        console.print(f"    [{i + 1}] {sample.title}: {len(words)} words aligned")
 
     # ── Step 5: Build timeline ───────────────────────────────────────────────
     console.print("[bold cyan]  Building timeline…[/]")
     timeline = build_timeline(config, sample_durations, sample_words)
     total_dur = timeline.total_duration
     total_frames = int(total_dur * config.fps) + 1
-    console.print(f"  Total duration: {total_dur:.2f}s  |  "
-                  f"Total frames: {total_frames:,}")
+    console.print(f"  Total duration: {total_dur:.2f}s  |  Total frames: {total_frames:,}")
 
     # ── Step 6: Render MP4 ───────────────────────────────────────────────────
     output_dir = config.output_dir
@@ -160,10 +156,10 @@ def run_pipeline(
     console.print(f"    {meta_path}")
 
     return {
-        "video_path":     mp4_path,
+        "video_path": mp4_path,
         "thumbnail_path": thumb_path,
-        "metadata_path":  meta_path,
-        "duration":       total_dur,
-        "elapsed_sec":    elapsed,
-        "metadata":       meta,
+        "metadata_path": meta_path,
+        "duration": total_dur,
+        "elapsed_sec": elapsed,
+        "metadata": meta,
     }

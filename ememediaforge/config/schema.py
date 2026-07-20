@@ -8,10 +8,8 @@ before any rendering begins.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
-
+from pydantic import BaseModel, Field, field_validator
 
 # ---------------------------------------------------------------------------
 # Supported values
@@ -27,6 +25,7 @@ VALID_TRANSCRIPT_EXTS = {".txt", ".text"}
 # ---------------------------------------------------------------------------
 # Sub-models
 # ---------------------------------------------------------------------------
+
 
 class SampleConfig(BaseModel):
     """Configuration for a single audio sample to showcase."""
@@ -50,9 +49,7 @@ class SampleConfig(BaseModel):
     @classmethod
     def validate_transcript_extension(cls, v: Path) -> Path:
         if v.suffix.lower() not in VALID_TRANSCRIPT_EXTS:
-            raise ValueError(
-                f"Transcript must be a plain text file (.txt). Got '{v.suffix}'"
-            )
+            raise ValueError(f"Transcript must be a plain text file (.txt). Got '{v.suffix}'")
         return v
 
 
@@ -68,6 +65,7 @@ class ProjectMeta(BaseModel):
 # ---------------------------------------------------------------------------
 # Root project config
 # ---------------------------------------------------------------------------
+
 
 class ProjectConfig(BaseModel):
     """
@@ -97,10 +95,12 @@ class ProjectConfig(BaseModel):
     project: ProjectMeta
     theme: str = Field("modern", description="Visual theme: modern | dark | minimal")
     template: str = Field("tts", description="Video template: tts | stt")
-    logo: Optional[Path] = Field(None, description="Path to logo image (PNG, JPG)")
+    logo: Path | None = Field(None, description="Path to logo image (PNG, JPG)")
     samples: list[SampleConfig] = Field(..., min_length=1)
     output_dir: Path = Field(Path("dist"), description="Output directory for generated files")
-    resolution: str = Field("1280x720", description="Video resolution: 1280x720 | 1080x1080 | 1080x1920")
+    resolution: str = Field(
+        "1280x720", description="Video resolution: 1280x720 | 1080x1080 | 1080x1920"
+    )
     fps: int = Field(30, ge=24, le=60, description="Frames per second (24–60)")
 
     @field_validator("theme")
@@ -108,9 +108,7 @@ class ProjectConfig(BaseModel):
     def validate_theme(cls, v: str) -> str:
         v = v.lower().strip()
         if v not in VALID_THEMES:
-            raise ValueError(
-                f"Unknown theme '{v}'. Choose from: {', '.join(sorted(VALID_THEMES))}"
-            )
+            raise ValueError(f"Unknown theme '{v}'. Choose from: {', '.join(sorted(VALID_THEMES))}")
         return v
 
     @field_validator("template")

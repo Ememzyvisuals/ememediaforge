@@ -1,0 +1,25 @@
+# EmemediaForge — NaijaVox 2.0 example demo
+# This is built automatically by CI on every release
+# Output appears in the GitHub Release assets
+
+project:
+  name: NaijaVox 2.0
+  description: Multilingual Nigerian Speech Recognition
+  author: Ememzyvisuals · Axiveri
+  url: https://huggingface.co/Axiveri
+
+theme: dark
+template: stt
+resolution: 1280x720
+fps: 30
+
+samples:
+  - title: Yoruba Sample
+    audio: samples/yoruba_sample.wav
+    transcript: samples/yoruba_sample.txt
+    language: yo
+
+  - title: Nigerian Pidgin
+    audio: samples/pidgin_sample.wav
+    transcript: samples/pidgin_sample.txt
+    language: pcm

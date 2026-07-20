@@ -2,14 +2,16 @@
 EmemediaForge — High-level video encoder.
 Ties together compositor + FFmpeg encoder.
 """
+
 from __future__ import annotations
+
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional
 
 from ememediaforge.render.compositor import compose_frames, precompute_waveforms
-from ememediaforge.render.ffmpeg     import build_video_cmd, FFmpegEncoder
+from ememediaforge.render.ffmpeg import FFmpegEncoder, build_video_cmd
+from ememediaforge.themes.base import Theme
 from ememediaforge.timeline.timeline import VideoTimeline
-from ememediaforge.themes.base       import Theme
 
 
 def encode_video(
@@ -19,7 +21,7 @@ def encode_video(
     height: int,
     fps: int,
     output_path: Path,
-    on_progress: Optional[Callable[[int, int], None]] = None,
+    on_progress: Callable[[int, int], None] | None = None,
 ) -> Path:
     """
     Full render pipeline: frames → FFmpeg → MP4.
@@ -47,12 +49,10 @@ def encode_video(
     cmd = build_video_cmd(width, height, fps, audio_timings, output_path)
 
     # Stream frames to FFmpeg
-    total_frames = int(timeline.total_duration * fps) + 1
 
     with FFmpegEncoder(cmd) as enc:
         for frame in compose_frames(
-            timeline, theme, width, height, fps,
-            waveform_cache, on_progress=on_progress
+            timeline, theme, width, height, fps, waveform_cache, on_progress=on_progress
         ):
             enc.write(frame.tobytes())
 

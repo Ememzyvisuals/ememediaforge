@@ -1,16 +1,19 @@
 """
 EmemediaForge — WordTimestamp data structure.
 """
+
 from __future__ import annotations
+
 from dataclasses import dataclass
 
 
 @dataclass
 class WordTimestamp:
     """Maps a single transcript word to its audio time range."""
+
     word: str
-    start: float   # seconds
-    end: float     # seconds
+    start: float  # seconds
+    end: float  # seconds
 
     @property
     def duration(self) -> float:

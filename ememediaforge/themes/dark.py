@@ -1,6 +1,7 @@
 """EmemediaForge — Dark theme: near-black canvas, neon green accent.
 Perfect for NaijaVox, Africlaude, and AI model demos.
 """
+
 from ememediaforge.themes.base import Theme
 
 DARK_THEME = Theme(

@@ -5,7 +5,7 @@
 **Turn any Speech AI model into a polished showcase video — with one command.**
 
 [![CI](https://github.com/Ememzyvisuals/ememediaforge/actions/workflows/ci.yml/badge.svg)](https://github.com/Ememzyvisuals/ememediaforge/actions)
-[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://pypi.org/project/ememediaforge/)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://github.com/Ememzyvisuals/ememediaforge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built by @Ememzyvisuals](https://img.shields.io/badge/built%20by-%40Ememzyvisuals-8B5CF6)](https://github.com/Ememzyvisuals)
 [![Axiveri](https://img.shields.io/badge/org-Axiveri-FF6B35)](https://huggingface.co/Axiveri)
@@ -93,6 +93,28 @@ Run EmemediaForge twice with two different models on the same audio. Stack the o
 - **Zero GPU required** — runs on laptops, GitHub Actions free tier, Kaggle, Colab
 - **Language agnostic** — works for any language, including tonal and low-resource languages
 - **Optional high-accuracy alignment** — install `stable-ts` extra for Whisper-powered word timing
+
+## Example Output
+
+> **NaijaVox 2.0** — generated automatically on every release by `forge build demo/project.yaml`
+> using the `dark` theme · `stt` template · `1280×720`
+
+[![NaijaVox 2.0 — EmemediaForge demo thumbnail](assets/example-thumbnail.png)](https://github.com/Ememzyvisuals/ememediaforge/releases/latest)
+
+*Click the image to go to the latest release — `demo.mp4` and `thumbnail.png` are attached as release assets.*
+
+| Setting | Value |
+|---------|-------|
+| Theme | `dark` |
+| Template | `stt` (Speech-to-Text) |
+| Resolution | `1280×720` |
+| Samples | Yoruba · Nigerian Pidgin |
+| Alignment | Energy-based (no GPU) |
+
+The demo video and thumbnail above are built fresh on every release by the CI pipeline —
+no manual recording or editing involved.
+
+---
 
 ---
 
@@ -355,7 +377,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
-[MIT](LICENSE) © 2025 Emmanuel Ariyo ([@Ememzyvisuals](https://github.com/Ememzyvisuals)), Axiveri.
+[MIT](LICENSE) © 2026 Emmanuel Ariyo ([@Ememzyvisuals](https://github.com/Ememzyvisuals)), Axiveri.
 
 ---
 

@@ -1,8 +1,11 @@
 """
 EmemediaForge — Lightweight audio duration utilities.
 """
+
 from __future__ import annotations
+
 from pathlib import Path
+
 from ememediaforge.audio.analyzer import get_duration
 
 

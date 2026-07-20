@@ -1,4 +1,5 @@
 """EmemediaForge — Minimal theme: off-white canvas, pure black accent."""
+
 from ememediaforge.themes.base import Theme
 
 MINIMAL_THEME = Theme(

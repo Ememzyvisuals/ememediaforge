@@ -1,7 +1,9 @@
 """
 EmemediaForge — Timeline data structures.
 """
+
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -18,6 +20,7 @@ class SceneSpec:
     duration    : how long this scene lasts in seconds
     data        : scene-specific payload (varies by type)
     """
+
     scene_type: str
     start_time: float
     duration: float
@@ -43,6 +46,7 @@ class VideoTimeline:
     """
     Ordered list of scenes that make up the complete video.
     """
+
     scenes: list[SceneSpec] = field(default_factory=list)
 
     @property

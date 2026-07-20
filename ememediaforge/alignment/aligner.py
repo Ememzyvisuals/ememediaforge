@@ -11,23 +11,22 @@ Igbo, Hausa, Pidgin) without any language-specific models.
 For production-level alignment, install the optional `stable-ts`
 extra: `pip install ememediaforge[stable_ts]`
 """
+
 from __future__ import annotations
 
 import re
 from pathlib import Path
 
-import numpy as np
-
 from ememediaforge.alignment.timestamps import WordTimestamp
 from ememediaforge.audio.analyzer import (
-    load_audio,
     compute_rms,
     find_voiced_segments,
+    load_audio,
 )
 from ememediaforge.core.exceptions import AlignmentError
 
-
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 def align(
     audio_path: Path | str,
@@ -64,6 +63,7 @@ def align(
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
+
 
 def _tokenize(transcript: str) -> list[str]:
     """Split transcript into words, stripping punctuation from edges."""
@@ -112,8 +112,8 @@ def _align_energy(
 
     # Speech boundaries
     speech_start = segments[0][0]
-    speech_end   = segments[-1][1]
-    speech_dur   = max(0.1, speech_end - speech_start)
+    speech_end = segments[-1][1]
+    speech_dur = max(0.1, speech_end - speech_start)
 
     total_chars = max(1, sum(len(w) for w in words))
 
@@ -158,11 +158,13 @@ def _align_stable_ts(
         stamps: list[WordTimestamp] = []
         for seg in result.segments:
             for word in seg.words:
-                stamps.append(WordTimestamp(
-                    word=word.word.strip(),
-                    start=float(word.start),
-                    end=float(word.end),
-                ))
+                stamps.append(
+                    WordTimestamp(
+                        word=word.word.strip(),
+                        start=float(word.start),
+                        end=float(word.end),
+                    )
+                )
         return stamps if stamps else None
     except Exception:
         return None

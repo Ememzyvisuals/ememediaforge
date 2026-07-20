@@ -2,9 +2,11 @@
 EmemediaForge — `forge init` command.
 Creates a starter project structure with example project.yaml.
 """
+
 from __future__ import annotations
+
 from pathlib import Path
-import typer
+
 from rich.console import Console
 
 console = Console()
@@ -84,7 +86,7 @@ def run_init(directory: str = ".") -> None:
     # Write project.yaml
     yaml_path = proj_dir / "project.yaml"
     if yaml_path.exists():
-        console.print(f"[yellow]  project.yaml already exists, skipping.[/]")
+        console.print("[yellow]  project.yaml already exists, skipping.[/]")
     else:
         yaml_path.write_text(EXAMPLE_YAML, encoding="utf-8")
         console.print(f"  [green]✓[/] Created {yaml_path}")
@@ -109,9 +111,12 @@ def run_init(directory: str = ".") -> None:
     console.print("\n  [bold cyan]Downloading Inter font (grotesk)…[/]")
     try:
         from ememediaforge.assets.loader import FontManager
+
         ok = FontManager.download_inter(show_progress=True)
         if not ok:
-            console.print("  [yellow]  Font download failed — bundled LiberationSans will be used.[/]")
+            console.print(
+                "  [yellow]  Font download failed — bundled LiberationSans will be used.[/]"
+            )
     except Exception as e:
         console.print(f"  [yellow]  Font download skipped: {e}[/]")
 

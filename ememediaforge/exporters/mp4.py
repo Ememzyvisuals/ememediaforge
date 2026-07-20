@@ -1,12 +1,15 @@
 """
 EmemediaForge — MP4 export convenience wrapper.
 """
+
 from __future__ import annotations
+
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional
-from ememediaforge.render.encoder    import encode_video
+
+from ememediaforge.render.encoder import encode_video
+from ememediaforge.themes.base import Theme
 from ememediaforge.timeline.timeline import VideoTimeline
-from ememediaforge.themes.base       import Theme
 
 
 def export_mp4(
@@ -16,7 +19,7 @@ def export_mp4(
     height: int,
     fps: int,
     output_path: Path,
-    on_progress: Optional[Callable[[int, int], None]] = None,
+    on_progress: Callable[[int, int], None] | None = None,
 ) -> Path:
     """Write the final MP4. Returns the output path."""
     return encode_video(

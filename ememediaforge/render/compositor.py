@@ -2,28 +2,40 @@
 EmemediaForge — Frame compositor.
 Routes timeline scenes to the correct Scene subclass and calls render().
 """
+
 from __future__ import annotations
-from typing import Iterator
+
+from collections.abc import Iterator
+
 from PIL import Image
 
+from ememediaforge.audio.analyzer import get_waveform_frames, load_audio
+from ememediaforge.scenes.intro import IntroScene
+from ememediaforge.scenes.outro import OutroScene
+from ememediaforge.scenes.sample import SampleScene
+from ememediaforge.scenes.transition import TransitionScene
 from ememediaforge.themes.base import Theme
 from ememediaforge.timeline.timeline import SceneSpec, VideoTimeline
-from ememediaforge.scenes.intro      import IntroScene
-from ememediaforge.scenes.outro      import OutroScene
-from ememediaforge.scenes.transition import TransitionScene
-from ememediaforge.scenes.sample     import SampleScene
-from ememediaforge.audio.analyzer    import get_waveform_frames, load_audio
 
 
-def _make_scene(spec: SceneSpec, theme: Theme, width: int, height: int,
-                fps: int, waveform_cache: dict[int, list[list[float]]]):
+def _make_scene(
+    spec: SceneSpec,
+    theme: Theme,
+    width: int,
+    height: int,
+    fps: int,
+    waveform_cache: dict[int, list[list[float]]],
+):
     """Instantiate the correct scene object from a SceneSpec."""
     t = spec.scene_type
     d = spec.data
 
     if t == "intro":
         return IntroScene(
-            theme=theme, width=width, height=height, fps=fps,
+            theme=theme,
+            width=width,
+            height=height,
+            fps=fps,
             title=d.get("title", ""),
             description=d.get("description", ""),
             author=d.get("author", ""),
@@ -33,7 +45,10 @@ def _make_scene(spec: SceneSpec, theme: Theme, width: int, height: int,
         )
     elif t == "outro":
         return OutroScene(
-            theme=theme, width=width, height=height, fps=fps,
+            theme=theme,
+            width=width,
+            height=height,
+            fps=fps,
             title=d.get("title", ""),
             url=d.get("url", ""),
             logo=d.get("logo"),
@@ -41,14 +56,20 @@ def _make_scene(spec: SceneSpec, theme: Theme, width: int, height: int,
         )
     elif t == "transition":
         return TransitionScene(
-            theme=theme, width=width, height=height, fps=fps,
+            theme=theme,
+            width=width,
+            height=height,
+            fps=fps,
             duration=spec.duration,
         )
     elif t == "sample":
-        idx      = d.get("sample_index", 0)
+        idx = d.get("sample_index", 0)
         w_frames = waveform_cache.get(idx, [[0.1] * 64])
         return SampleScene(
-            theme=theme, width=width, height=height, fps=fps,
+            theme=theme,
+            width=width,
+            height=height,
+            fps=fps,
             model_name=d.get("model_name", ""),
             voice_label=d.get("title", ""),
             words=d.get("words", []),
@@ -75,9 +96,9 @@ def precompute_waveforms(
     for spec in timeline.scenes:
         if spec.scene_type != "sample":
             continue
-        idx        = spec.data.get("sample_index", 0)
+        idx = spec.data.get("sample_index", 0)
         audio_path = spec.data.get("audio_path", "")
-        n_frames   = int(spec.duration * fps) + 1
+        n_frames = int(spec.duration * fps) + 1
         try:
             y, sr = load_audio(audio_path, sr=22050)
             cache[idx] = get_waveform_frames(y, sr, n_frames, n_bars=64, fps=fps)
@@ -102,7 +123,7 @@ def compose_frames(
     ----------
     on_progress : optional callable(current_frame, total_frames)
     """
-    total_dur    = timeline.total_duration
+    total_dur = timeline.total_duration
     total_frames = int(total_dur * fps) + 1
 
     # Cache scene objects (avoid re-instantiating for every frame)
@@ -110,7 +131,7 @@ def compose_frames(
 
     for frame_idx in range(total_frames):
         global_t = frame_idx / fps
-        spec     = timeline.scene_at(global_t)
+        spec = timeline.scene_at(global_t)
 
         if spec is None:
             # Past end of timeline → black frame
@@ -119,13 +140,11 @@ def compose_frames(
 
         spec_id = id(spec)
         if spec_id not in scene_obj_cache:
-            scene_obj_cache[spec_id] = _make_scene(
-                spec, theme, width, height, fps, waveform_cache
-            )
+            scene_obj_cache[spec_id] = _make_scene(spec, theme, width, height, fps, waveform_cache)
 
-        scene    = scene_obj_cache[spec_id]
-        local_t  = spec.local_time(global_t)
-        frame    = scene.render(local_t)
+        scene = scene_obj_cache[spec_id]
+        local_t = spec.local_time(global_t)
+        frame = scene.render(local_t)
         yield frame
 
         if on_progress:

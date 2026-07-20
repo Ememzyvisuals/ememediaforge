@@ -1,10 +1,13 @@
 """
 EmemediaForge — Intro scene: animated fade-in with logo + model title.
 """
+
 from __future__ import annotations
+
 from PIL import Image, ImageDraw
-from ememediaforge.scenes.base import BaseScene, ease_in_out, clip
+
 from ememediaforge.assets.loader import FontManager
+from ememediaforge.scenes.base import BaseScene, clip, ease_in_out
 from ememediaforge.themes.base import Theme
 
 
@@ -18,23 +21,33 @@ class IntroScene(BaseScene):
       - Subtle tagline
     """
 
-    def __init__(self, theme: Theme, width: int, height: int, fps: int,
-                 title: str, description: str = "", author: str = "",
-                 url: str = "", logo: str | None = None, duration: float = 1.8):
+    def __init__(
+        self,
+        theme: Theme,
+        width: int,
+        height: int,
+        fps: int,
+        title: str,
+        description: str = "",
+        author: str = "",
+        url: str = "",
+        logo: str | None = None,
+        duration: float = 1.8,
+    ):
         super().__init__(theme, width, height, fps)
-        self.title       = title
+        self.title = title
         self.description = description
-        self.author      = author
-        self.url         = url
-        self.logo        = logo
-        self.duration    = duration
+        self.author = author
+        self.url = url
+        self.logo = logo
+        self.duration = duration
 
     def render(self, local_t: float) -> Image.Image:
         progress = ease_in_out(clip(local_t / self.duration, 0.0, 1.0))
-        img  = self.blank()
+        img = self.blank()
         draw = ImageDraw.Draw(img)
 
-        cx = self.width  // 2
+        cx = self.width // 2
         cy = self.height // 2
 
         # ── Subtle background grid / accent lines ──────────────────────────
@@ -69,12 +82,11 @@ class IntroScene(BaseScene):
         underline_h = max(2, int(self.height * 0.005))
         ux1 = cx - underline_w // 2
         ux2 = cx + underline_w // 2
-        uy  = title_y + title_size + int(self.height * 0.008)
+        uy = title_y + title_size + int(self.height * 0.008)
         if self.description:
             # Place underline right below title, above description
             uy = title_y + title_size + int(self.height * 0.008)
-        draw.rectangle([ux1, uy, ux2, uy + underline_h],
-                       fill=self.theme.accent_color)
+        draw.rectangle([ux1, uy, ux2, uy + underline_h], fill=self.theme.accent_color)
 
         # ── Author / URL footer ────────────────────────────────────────────
         if self.author or self.url:
@@ -89,13 +101,18 @@ class IntroScene(BaseScene):
     def _draw_accent_lines(self, draw: ImageDraw.ImageDraw, progress: float) -> None:
         """Subtle decorative corner accent lines."""
         r, g, b = self.theme.accent_color
-        alpha = int(20 * progress)
         c = (max(0, r - 60), max(0, g - 60), max(0, b - 60))
         # Top-left
         draw.line([(0, 0), (int(self.width * 0.15), 0)], fill=c, width=2)
         draw.line([(0, 0), (0, int(self.height * 0.08))], fill=c, width=2)
         # Bottom-right
-        draw.line([(self.width, self.height),
-                   (self.width - int(self.width * 0.15), self.height)], fill=c, width=2)
-        draw.line([(self.width, self.height),
-                   (self.width, self.height - int(self.height * 0.08))], fill=c, width=2)
+        draw.line(
+            [(self.width, self.height), (self.width - int(self.width * 0.15), self.height)],
+            fill=c,
+            width=2,
+        )
+        draw.line(
+            [(self.width, self.height), (self.width, self.height - int(self.height * 0.08))],
+            fill=c,
+            width=2,
+        )

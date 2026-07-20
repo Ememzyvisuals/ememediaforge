@@ -13,7 +13,7 @@ from typing import Any
 import yaml
 from pydantic import ValidationError
 
-from ememediaforge.config.schema import ProjectConfig, SampleConfig
+from ememediaforge.config.schema import ProjectConfig
 from ememediaforge.core.exceptions import ConfigError
 
 
@@ -63,13 +63,11 @@ def load_config(config_path: str | Path) -> ProjectConfig:
         raise ConfigError(f"Config file not found: {path}")
 
     if path.suffix.lower() not in (".yaml", ".yml"):
-        raise ConfigError(
-            f"Config file must be a YAML file (.yaml or .yml), got: {path.name}"
-        )
+        raise ConfigError(f"Config file must be a YAML file (.yaml or .yml), got: {path.name}")
 
     # ── Parse YAML ──────────────────────────────────────────────────────────
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             raw: dict[str, Any] = yaml.safe_load(f) or {}
     except yaml.YAMLError as e:
         raise ConfigError(f"YAML parse error in {path.name}:\n{e}") from e
@@ -88,9 +86,7 @@ def load_config(config_path: str | Path) -> ProjectConfig:
             loc = " → ".join(str(x) for x in err["loc"])
             msg = err["msg"]
             errors.append(f"  [{loc}] {msg}")
-        raise ConfigError(
-            f"Invalid configuration in {path.name}:\n" + "\n".join(errors)
-        ) from e
+        raise ConfigError(f"Invalid configuration in {path.name}:\n" + "\n".join(errors)) from e
 
     return config
 

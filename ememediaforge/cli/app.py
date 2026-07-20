@@ -6,15 +6,15 @@ Commands:
   forge validate <config>  Validate config without building
   forge build <config>     Full render pipeline
 """
+
 from __future__ import annotations
-from typing import Optional
 
 import typer
 from rich.console import Console
 
 import ememediaforge
 
-app     = typer.Typer(
+app = typer.Typer(
     name="forge",
     help=(
         "EmemediaForge — Professional showcase video generator for Speech AI models.\n\n"
@@ -29,8 +29,7 @@ console = Console()
 @app.command("init")
 def cmd_init(
     directory: str = typer.Argument(
-        ".",
-        help="Directory to scaffold the project in (default: current directory)"
+        ".", help="Directory to scaffold the project in (default: current directory)"
     ),
 ) -> None:
     """
@@ -38,22 +37,22 @@ def cmd_init(
     sample directories, and bundled font download.
     """
     from ememediaforge.cli.init import run_init
+
     run_init(directory)
 
 
 @app.command("validate")
 def cmd_validate(
-    config: str = typer.Argument(
-        ...,
-        help="Path to project.yaml"
-    ),
+    config: str = typer.Argument(..., help="Path to project.yaml"),
 ) -> None:
     """
     Validate project.yaml and verify all assets exist.
     Does NOT render any video.
     """
-    from ememediaforge.cli.validate import run_validate
     import sys
+
+    from ememediaforge.cli.validate import run_validate
+
     ok = run_validate(config)
     if not ok:
         sys.exit(1)
@@ -61,17 +60,14 @@ def cmd_validate(
 
 @app.command("build")
 def cmd_build(
-    config: str = typer.Argument(
-        ...,
-        help="Path to project.yaml"
-    ),
+    config: str = typer.Argument(..., help="Path to project.yaml"),
     stable_ts: bool = typer.Option(
-        False, "--stable-ts / --no-stable-ts",
-        help="Use stable-ts for higher-accuracy word alignment (requires: pip install ememediaforge[stable_ts])"
+        False,
+        "--stable-ts / --no-stable-ts",
+        help="Use stable-ts for higher-accuracy word alignment (requires: pip install ememediaforge[stable_ts])",
     ),
-    output: Optional[str] = typer.Option(
-        None, "--output", "-o",
-        help="Override output directory from config (default: dist/)"
+    output: str | None = typer.Option(
+        None, "--output", "-o", help="Override output directory from config (default: dist/)"
     ),
 ) -> None:
     """
@@ -83,6 +79,7 @@ def cmd_build(
       dist/metadata.json   — Build metadata
     """
     from ememediaforge.cli.build import run_build
+
     run_build(config, stable_ts=stable_ts, output_dir=output)
 
 

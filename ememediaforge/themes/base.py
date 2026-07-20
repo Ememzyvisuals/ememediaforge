@@ -2,7 +2,9 @@
 EmemediaForge — Base Theme dataclass.
 Themes define visual appearance without affecting rendering logic.
 """
+
 from __future__ import annotations
+
 from dataclasses import dataclass
 
 
@@ -27,6 +29,7 @@ class Theme:
     progress_color  : Progress bar / indicator color
     overlay_color   : Semi-transparent overlay color (R, G, B, A)
     """
+
     name: str
     bg_color: tuple[int, int, int]
     surface_color: tuple[int, int, int]
@@ -44,6 +47,7 @@ class Theme:
 
 # ── Registry ──────────────────────────────────────────────────────────────────
 
+
 def get_theme(name: str) -> Theme:
     """
     Return a Theme by name.
@@ -57,23 +61,20 @@ def get_theme(name: str) -> Theme:
 
     Raises ValueError for unknown theme names.
     """
-    from ememediaforge.themes.modern  import MODERN_THEME
-    from ememediaforge.themes.light   import LIGHT_THEME
-    from ememediaforge.themes.dark    import DARK_THEME
+    from ememediaforge.themes.dark import DARK_THEME
+    from ememediaforge.themes.light import LIGHT_THEME
     from ememediaforge.themes.minimal import MINIMAL_THEME
+    from ememediaforge.themes.modern import MODERN_THEME
 
     registry: dict[str, Theme] = {
-        "modern":  MODERN_THEME,
-        "light":   LIGHT_THEME,
-        "dark":    DARK_THEME,
+        "modern": MODERN_THEME,
+        "light": LIGHT_THEME,
+        "dark": DARK_THEME,
         "minimal": MINIMAL_THEME,
     }
     key = name.lower().strip()
     if key not in registry:
-        raise ValueError(
-            f"Unknown theme '{key}'. "
-            f"Available: {', '.join(sorted(registry))}"
-        )
+        raise ValueError(f"Unknown theme '{key}'. Available: {', '.join(sorted(registry))}")
     return registry[key]
 
 

@@ -1,14 +1,17 @@
 """
 EmemediaForge — `forge build` command.
 """
+
 from __future__ import annotations
+
 import sys
-from pathlib import Path
+
 from rich.console import Console
-from ememediaforge.config.loader   import load_config
-from ememediaforge.core.pipeline   import run_pipeline
+
+from ememediaforge.config.loader import load_config
 from ememediaforge.core.exceptions import ForgeError
-from ememediaforge.render.ffmpeg   import check_ffmpeg, FFmpegError
+from ememediaforge.core.pipeline import run_pipeline
+from ememediaforge.render.ffmpeg import FFmpegError, check_ffmpeg
 
 console = Console()
 
@@ -34,7 +37,7 @@ def run_build(
         console.print(f"\n[bold red]✗ FFmpeg not found[/]\n{e}")
         sys.exit(1)
 
-    console.print(f"\n[bold magenta]EmemediaForge[/] [dim]— Speech AI Showcase Generator[/]")
+    console.print("\n[bold magenta]EmemediaForge[/] [dim]— Speech AI Showcase Generator[/]")
     console.print(f"[dim]Building[/] [bold cyan]{config_path}[/]\n")
 
     # ── Load config ──────────────────────────────────────────────────────────
@@ -47,6 +50,7 @@ def run_build(
     # Override output dir if provided
     if output_dir:
         from pathlib import Path as _Path
+
         config.output_dir = _Path(output_dir)
 
     # ── Run pipeline ─────────────────────────────────────────────────────────
