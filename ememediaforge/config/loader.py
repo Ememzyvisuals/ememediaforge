@@ -67,7 +67,7 @@ def load_config(config_path: str | Path) -> ProjectConfig:
             f"Config file must be a YAML file (.yaml or .yml), got: {path.name}"
         )
 
-    # ── Parse YAML ──────────────────────────────────────────────────────────
+    # ── Parse YAML ───────────────────────────────────────────────────────────
     try:
         with open(path, "r", encoding="utf-8") as f:
             raw: dict[str, Any] = yaml.safe_load(f) or {}
@@ -78,7 +78,7 @@ def load_config(config_path: str | Path) -> ProjectConfig:
     config_dir = path.parent
     raw = _resolve_paths(config_dir, raw)
 
-    # ── Pydantic validation ─────────────────────────────────────────────────
+    # ── Pydantic validation ──────────────────────────────────────────────────
     try:
         config = ProjectConfig.model_validate(raw)
     except ValidationError as e:

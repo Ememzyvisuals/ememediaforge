@@ -18,20 +18,24 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
-
-from ememediaforge.config.schema   import ProjectConfig
-from ememediaforge.config.loader   import validate_assets_exist
-from ememediaforge.audio.analyzer  import get_duration
-from ememediaforge.alignment.aligner import align
-from ememediaforge.timeline.scheduler import build_timeline
-from ememediaforge.themes.base     import get_theme
-from ememediaforge.exporters.mp4   import export_mp4
-from ememediaforge.exporters.thumbnail import generate_thumbnail
-from ememediaforge.exporters.metadata  import export_metadata
-from ememediaforge.core.exceptions import (
-    AssetNotFoundError, ForgeError
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
 )
+
+from ememediaforge.alignment.aligner import align
+from ememediaforge.audio.analyzer import get_duration
+from ememediaforge.config.loader import validate_assets_exist
+from ememediaforge.config.schema import ProjectConfig
+from ememediaforge.core.exceptions import AssetNotFoundError, ForgeError
+from ememediaforge.exporters.metadata import export_metadata
+from ememediaforge.exporters.mp4 import export_mp4
+from ememediaforge.exporters.thumbnail import generate_thumbnail
+from ememediaforge.themes.base import get_theme
+from ememediaforge.timeline.scheduler import build_timeline
 
 console = Console()
 
@@ -160,10 +164,10 @@ def run_pipeline(
     console.print(f"    {meta_path}")
 
     return {
-        "video_path":     mp4_path,
+        "video_path": mp4_path,
         "thumbnail_path": thumb_path,
-        "metadata_path":  meta_path,
-        "duration":       total_dur,
-        "elapsed_sec":    elapsed,
-        "metadata":       meta,
+        "metadata_path": meta_path,
+        "duration": total_dur,
+        "elapsed_sec": elapsed,
+        "metadata": meta,
     }

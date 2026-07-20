@@ -7,6 +7,7 @@ Commands:
   forge build <config>     Full render pipeline
 """
 from __future__ import annotations
+
 from typing import Optional
 
 import typer
@@ -14,7 +15,7 @@ from rich.console import Console
 
 import ememediaforge
 
-app     = typer.Typer(
+app = typer.Typer(
     name="forge",
     help=(
         "EmemediaForge — Professional showcase video generator for Speech AI models.\n\n"

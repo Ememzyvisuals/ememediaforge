@@ -2,8 +2,10 @@
 EmemediaForge — Transition scene: fast dip-to-black between samples.
 """
 from __future__ import annotations
+
 from PIL import Image
-from ememediaforge.scenes.base import BaseScene, ease_in_out, clip
+
+from ememediaforge.scenes.base import BaseScene, clip, ease_in_out
 from ememediaforge.themes.base import Theme
 
 

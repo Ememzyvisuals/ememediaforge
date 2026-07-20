@@ -3,13 +3,14 @@ EmemediaForge — High-level video encoder.
 Ties together compositor + FFmpeg encoder.
 """
 from __future__ import annotations
+
 from pathlib import Path
 from typing import Callable, Optional
 
 from ememediaforge.render.compositor import compose_frames, precompute_waveforms
-from ememediaforge.render.ffmpeg     import build_video_cmd, FFmpegEncoder
+from ememediaforge.render.ffmpeg import FFmpegEncoder, build_video_cmd
+from ememediaforge.themes.base import Theme
 from ememediaforge.timeline.timeline import VideoTimeline
-from ememediaforge.themes.base       import Theme
 
 
 def encode_video(

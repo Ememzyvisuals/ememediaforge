@@ -2,9 +2,11 @@
 EmemediaForge — FFmpeg subprocess wrapper.
 """
 from __future__ import annotations
+
 import shutil
 import subprocess
 from pathlib import Path
+
 from ememediaforge.core.exceptions import FFmpegError
 
 
@@ -76,7 +78,7 @@ def build_video_cmd(
                 f"[{i + 1}:a]adelay={delay_ms}|{delay_ms},apad[a{i}]"
             )
         n = len(audio_timings)
-        mix_in  = "".join(f"[a{i}]" for i in range(n))
+        mix_in = "".join(f"[a{i}]" for i in range(n))
         filter_parts.append(
             f"{mix_in}amix=inputs={n}:normalize=0:dropout_transition=0[aout]"
         )
@@ -109,40 +111,34 @@ class FFmpegEncoder:
     on stdin and writes the encoded MP4 to disk.
 
     Usage:
-        with FFmpegEncoder(cmd) as enc:
-            for frame in frames:
-                enc.write(frame.tobytes())
+    ```
+    with FFmpegEncoder(cmd) as enc:
+        for frame_bytes in frames:
+            enc.write(frame_bytes)
+    ```
     """
-
     def __init__(self, cmd: list[str]):
-        self.cmd  = cmd
-        self._proc: subprocess.Popen | None = None
+        self.cmd = cmd
+        self.proc = None
 
-    def __enter__(self) -> "FFmpegEncoder":
-        self._proc = subprocess.Popen(
+    def __enter__(self):
+        self.proc = subprocess.Popen(
             self.cmd,
             stdin=subprocess.PIPE,
-            stdout=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
         return self
 
-    def write(self, frame_bytes: bytes) -> None:
-        if self._proc and self._proc.stdin:
-            try:
-                self._proc.stdin.write(frame_bytes)
-            except BrokenPipeError as e:
-                stderr = self._proc.stderr.read().decode(errors="replace") if self._proc.stderr else ""
-                raise FFmpegError(f"FFmpeg pipe broken:\n{stderr}") from e
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.proc:
+            self.proc.stdin.close()
+            self.proc.wait()
+            if self.proc.returncode != 0:
+                stderr = self.proc.stderr.read().decode()
+                raise FFmpegError(f"FFmpeg encoding failed:\n{stderr}")
 
-    def __exit__(self, *_) -> None:
-        if not self._proc:
-            return
-        if self._proc.stdin:
-            self._proc.stdin.close()
-        self._proc.wait()
-        if self._proc.returncode != 0:
-            stderr = (self._proc.stderr.read() if self._proc.stderr else b"").decode(errors="replace")
-            raise FFmpegError(
-                f"FFmpeg exited with code {self._proc.returncode}:\n{stderr}"
-            )
+    def write(self, data: bytes) -> None:
+        """Write raw frame bytes to FFmpeg stdin."""
+        if self.proc and self.proc.stdin:
+            self.proc.stdin.write(data)

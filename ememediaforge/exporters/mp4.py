@@ -2,11 +2,13 @@
 EmemediaForge — MP4 export convenience wrapper.
 """
 from __future__ import annotations
+
 from pathlib import Path
 from typing import Callable, Optional
-from ememediaforge.render.encoder    import encode_video
+
+from ememediaforge.render.encoder import encode_video
+from ememediaforge.themes.base import Theme
 from ememediaforge.timeline.timeline import VideoTimeline
-from ememediaforge.themes.base       import Theme
 
 
 def export_mp4(
