@@ -1,0 +1,49 @@
+name: Bug Report
+description: Something broken? File it here.
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: EmemediaForge version
+      placeholder: "e.g. 1.0.0 (run: forge version)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS
+      options: [Ubuntu/Debian, macOS, Windows, Other Linux, Kaggle/Colab]
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "e.g. 3.11.2 (run: python --version)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command that failed
+      placeholder: "forge build project.yaml"
+    validations:
+      required: true
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Full error output
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: project.yaml (redact any personal info)
+      render: yaml

@@ -1,0 +1,91 @@
+[build-system]
+requires      = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name        = "ememediaforge"
+version     = "1.0.0"
+description = "Professional showcase video generator for Speech AI models"
+readme      = "README.md"
+license     = { file = "LICENSE" }
+authors     = [
+    { name = "Emmanuel Ariyo", email = "ememzyvisualsdigitals@gmail.com" }
+]
+keywords = [
+    "speech", "ai", "tts", "stt", "video", "demo",
+    "showcase", "nlp", "huggingface", "karaoke", "waveform",
+    "african-ai", "nlp-tools"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "typer>=0.12.0",
+    "rich>=13.7.0",
+    "pydantic>=2.5.0",
+    "PyYAML>=6.0.1",
+    "librosa>=0.11.0",
+    "numpy>=1.26.0",
+    "pillow>=10.3.0",
+    "soundfile>=0.12.1",
+    "scipy>=1.11.0",
+    "click>=8.1.7",
+]
+
+[project.optional-dependencies]
+stable_ts = [
+    "stable-ts>=2.18.0",
+    "openai-whisper>=20231117",
+]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.3.0",
+    "mypy>=1.8.0",
+]
+
+[project.scripts]
+forge = "ememediaforge.cli.app:main"
+
+[project.urls]
+Homepage        = "https://github.com/Ememzyvisuals/ememediaforge"
+Documentation   = "https://github.com/Ememzyvisuals/ememediaforge#readme"
+Repository      = "https://github.com/Ememzyvisuals/ememediaforge"
+"Bug Tracker"   = "https://github.com/Ememzyvisuals/ememediaforge/issues"
+"HuggingFace"   = "https://huggingface.co/Axiveri"
+Changelog       = "https://github.com/Ememzyvisuals/ememediaforge/releases"
+
+[tool.setuptools.packages.find]
+where   = ["."]
+include = ["ememediaforge*"]
+
+[tool.setuptools.package-data]
+"ememediaforge.assets" = ["fonts/*.ttf", "fonts/*.otf"]
+
+[tool.ruff]
+target-version = "py310"
+line-length    = 100
+select         = ["E", "F", "I", "UP", "B"]
+ignore         = ["E501"]
+
+[tool.mypy]
+python_version         = "3.10"
+strict                 = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts   = "-v --tb=short"
