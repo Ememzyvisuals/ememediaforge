@@ -13,7 +13,7 @@ from typing import Any
 import yaml
 from pydantic import ValidationError
 
-from ememediaforge.config.schema import ProjectConfig, SampleConfig
+from ememediaforge.config.schema import ProjectConfig
 from ememediaforge.core.exceptions import ConfigError
 
 
@@ -67,7 +67,7 @@ def load_config(config_path: str | Path) -> ProjectConfig:
             f"Config file must be a YAML file (.yaml or .yml), got: {path.name}"
         )
 
-    # ── Parse YAML ───────────────────────────────────────────────────────────
+    # ── Parse YAML ──────────────────────────────────────────────────────────
     try:
         with open(path, "r", encoding="utf-8") as f:
             raw: dict[str, Any] = yaml.safe_load(f) or {}
