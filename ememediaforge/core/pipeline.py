@@ -129,6 +129,7 @@ def run_pipeline(
             fps=config.fps,
             output_path=mp4_path,
             on_progress=_on_progress,
+            fast=fast,  # noqa: F821
         )
 
     # ── Step 7: Thumbnail ────────────────────────────────────────────────────

@@ -4,10 +4,10 @@
 # Trigger:  git tag v1.0.1 && git push origin v1.0.1 --force
 #
 # Pipeline:
-#   1. Tests           — must pass, blocks everything else
-#   2. Build           — wheel + tarball, version synced from tag
-#   3. Build Demo      — generates NaijaVox 2.0 showcase video + thumbnail
-#   4. GitHub Release  — changelog + wheel + demo.mp4 + thumbnail all attached
+#   1. Tests           — must pass, blocks everything
+#   2. Build           — wheel + tarball
+#   3. Build Demo      — NaijaVox 2.0 demo video (ultrafast preset, 15 min cap)
+#   4. GitHub Release  — changelog + wheel + demo.mp4 + thumbnail attached
 # ─────────────────────────────────────────────────────────────────────────────
 name: Release
 
@@ -73,6 +73,8 @@ jobs:
     name: Build NaijaVox 2.0 demo video
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 15          # hard cap — never hangs past 15 minutes
+
     steps:
       - uses: actions/checkout@v4
 
@@ -91,22 +93,25 @@ jobs:
         run: python3 demo/generate_audio.py
 
       - name: Build demo video
-        run: forge build demo/project.yaml --output demo/dist
+        # --fast uses ultrafast FFmpeg preset — encodes in seconds not hours
+        # stderr deadlock is fixed in render/ffmpeg.py via background drain thread
+        run: forge build demo/project.yaml --output demo/dist --fast
 
       - name: Verify outputs
         run: |
           echo "=== Demo outputs ==="
           ls -lh demo/dist/
-          echo "Video duration:"
-          ffprobe -v quiet -show_entries format=duration \
-            -of default=noprint_wrappers=1:nokey=1 demo/dist/demo.mp4
+          ffprobe -v quiet \
+            -show_entries format=duration \
+            -of default=noprint_wrappers=1:nokey=1 \
+            demo/dist/demo.mp4
 
       - uses: actions/upload-artifact@v4
         with:
           name: demo
           path: demo/dist/
 
-  # ── 4. GitHub Release with changelog + wheel + demo video ──────────────────
+  # ── 4. GitHub Release ───────────────────────────────────────────────────────
   github-release:
     name: GitHub Release
     needs: [build, build-demo]
@@ -152,18 +157,13 @@ jobs:
           TAG="${{ github.ref_name }}"
 
           NOTES="## 🎬 NaijaVox 2.0 Demo\n\n"
-          NOTES+="> Generated automatically by this release pipeline using \`forge build\`\n\n"
+          NOTES+="> Generated automatically by this release pipeline using \`forge build --fast\`\n\n"
           NOTES+="Download \`demo.mp4\` and \`thumbnail.png\` from the assets below.\n\n"
-          NOTES+="---\n\n"
-          NOTES+="## Install\n\n"
+          NOTES+="---\n\n## Install\n\n"
           NOTES+="\`\`\`bash\n"
-          NOTES+="# Option 1 — direct from this release\n"
           NOTES+="pip install https://github.com/${REPO}/releases/download/${TAG}/${WHEEL}\n\n"
-          NOTES+="# Option 2 — git clone\n"
-          NOTES+="git clone https://github.com/${REPO}.git\n"
-          NOTES+="cd ememediaforge && pip install .\n"
-          NOTES+="\`\`\`\n\n"
-          NOTES+="---\n\n## What's Changed\n\n"
+          NOTES+="git clone https://github.com/${REPO}.git && cd ememediaforge && pip install .\n"
+          NOTES+="\`\`\`\n\n---\n\n## What's Changed\n\n"
           [ -n "$FEAT"  ] && NOTES+="### ✨ New Features\n${FEAT}\n\n"
           [ -n "$FIX"   ] && NOTES+="### 🐛 Bug Fixes\n${FIX}\n\n"
           [ -n "$DOCS"  ] && NOTES+="### 📚 Documentation\n${DOCS}\n\n"

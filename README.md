@@ -206,8 +206,10 @@ forge build project.yaml
 | `forge init [dir]` | Scaffold a new project with example config and folder structure |
 | `forge validate <config>` | Check config + verify all asset files exist — no build triggered |
 | `forge build <config>` | Full render: audio analysis → alignment → frames → FFmpeg → MP4 |
-| `forge build <config> --stable-ts` | Same, but uses Whisper-tiny for higher-accuracy word alignment |
+| `forge build <config> --fast` | Same, but uses FFmpeg `ultrafast` preset — 5–10× faster encode, slightly larger file. **Recommended for CI, Kaggle, Colab, and quick previews** |
+| `forge build <config> --stable-ts` | Uses Whisper-tiny for higher-accuracy word alignment |
 | `forge build <config> --output ./out` | Override output directory |
+| `forge build <config> --fast --output ./out` | Fast mode + custom output (combine any flags) |
 | `forge version` | Print installed version |
 
 ---
@@ -330,6 +332,108 @@ All rendering runs on CPU. No GPU required.
 | ~60s | 6 | 5–8 minutes |
 
 Render time scales with video duration × resolution. `1280×720` renders roughly 2× faster than `1080×1080`.
+
+---
+
+## Tips & Recommendations
+
+### Get the best karaoke sync
+- **Match the transcript exactly** to what is spoken — every word, no extras
+- **Use WAV format** for cleanest audio analysis; MP3 compression artifacts confuse the energy detector
+- **Normalize audio** to around −3 dBFS before building — consistent amplitude gives better waveform animation
+- **Avoid background music** in your samples — it raises the noise floor and throws off voiced segment detection
+- **Keep samples under 30 seconds each** — long samples make for very large videos and slow CI builds
+- Add `--stable-ts` if you have fast speech, lots of short words, or heavy code-switching between languages
+
+### Speed up your build
+- Use `--fast` during development and in CI — it uses FFmpeg's `ultrafast` preset and is 5–10× faster with almost no visible quality difference at web resolutions
+- Use `resolution: 854x480` in your config during iteration, switch to `1280x720` for the final release build
+- Reduce `fps: 24` for faster renders — human eye can't tell the difference from 30fps for speech demos
+- Keep your sample count low (2–3 samples) for the demo video; link to more samples in your model card
+
+### Running on Kaggle / Colab
+```bash
+!apt install ffmpeg -y -q
+!pip install git+https://github.com/Ememzyvisuals/ememediaforge.git -q
+
+# Always use --fast on Colab/Kaggle — CPU is shared, rendering is slower
+!forge build project.yaml --fast
+```
+
+### Social media formats at a glance
+| Platform | Resolution | Flag |
+|----------|-----------|------|
+| YouTube / LinkedIn | `1280x720` | default |
+| Twitter / X (square) | `1080x1080` | `resolution: 1080x1080` |
+| TikTok / Reels / Shorts | `1080x1920` | `resolution: 1080x1920` |
+
+Generate all three from the same audio — just change `resolution:` and run again.
+
+### Choosing a theme
+- `dark` — highest visual impact, best for X/Twitter and tech audiences. Use for NaijaVox, Africlaude, and AI model launches
+- `light` — matches HuggingFace's white UI. Best for embedding directly in model cards
+- `modern` — professional purple, good for LinkedIn and product demos
+- `minimal` — clean black-on-white for academic papers and conservative audiences
+
+### Logo tips
+- Use a **PNG with transparent background** — renders cleanly over any theme color
+- Recommended size: at least **200×200px** before scaling (the tool resizes automatically)
+- If you don't have a logo yet, remove the `logo:` line from your config — the layout adjusts automatically
+
+---
+
+## Troubleshooting
+
+### Build hangs and never completes
+This was a known bug in early versions caused by a deadlock in the FFmpeg stderr pipe. It is fixed as of v1.0.0. If you are on an older version, update:
+```bash
+git pull origin main && pip install -e .
+```
+If it still hangs, add `--fast` — ultrafast encoding is less likely to buffer-stall under memory pressure:
+```bash
+forge build project.yaml --fast
+```
+
+### `FFmpeg not found in PATH`
+Install FFmpeg for your platform:
+```bash
+# Ubuntu / Debian / Colab / Kaggle
+sudo apt install ffmpeg -y
+
+# macOS
+brew install ffmpeg
+
+# Windows — download from https://ffmpeg.org/download.html
+# Then add the bin/ folder to your system PATH
+```
+
+### `Config file not found` / `Asset not found`
+Run `forge validate project.yaml` — it tells you exactly which files are missing and where it looked.
+
+### Words are out of sync with the audio
+- Check the transcript matches the audio exactly (no missing or extra words)
+- Try `--stable-ts` for better alignment (requires `pip install "ememediaforge[stable_ts]"`)
+- Make sure your audio has minimal background noise or music
+
+### Output video has no audio
+- Confirm your audio file path in `project.yaml` is correct
+- Run `forge validate project.yaml` to check
+- Ensure FFmpeg has AAC codec support: `ffmpeg -codecs | grep aac`
+
+### Font looks pixelated or ugly
+Run `forge init` — this downloads the Inter grotesk font to `~/.ememediaforge/fonts/`. If you already ran init, check that the download succeeded:
+```bash
+ls ~/.ememediaforge/fonts/
+```
+If the folder is empty or missing, the tool falls back to the bundled Liberation Sans, which is also a clean grotesk font. Quality will still be good.
+
+### Rendering is very slow
+- Add `--fast` to your command
+- Drop resolution to `854x480` for quick previews
+- On Colab/Kaggle, shared CPU can be slow — `--fast` and lower resolution helps significantly
+- For long audio (>60s per sample), consider splitting into shorter clips
+
+---
 
 ---
 

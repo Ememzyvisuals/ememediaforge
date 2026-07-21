@@ -20,6 +20,7 @@ def export_mp4(
     fps: int,
     output_path: Path,
     on_progress: Callable[[int, int], None] | None = None,
+    fast: bool = False,
 ) -> Path:
     """Write the final MP4. Returns the output path."""
     return encode_video(
@@ -30,4 +31,5 @@ def export_mp4(
         fps=fps,
         output_path=output_path,
         on_progress=on_progress,
+        fast=fast,
     )

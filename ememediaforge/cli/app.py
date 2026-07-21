@@ -80,7 +80,7 @@ def cmd_build(
     """
     from ememediaforge.cli.build import run_build
 
-    run_build(config, stable_ts=stable_ts, output_dir=output)
+    run_build(config, stable_ts=stable_ts, output_dir=output, fast=fast)  # noqa: F821
 
 
 @app.command("version")

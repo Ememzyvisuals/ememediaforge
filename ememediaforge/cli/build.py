@@ -20,6 +20,7 @@ def run_build(
     config_path: str,
     stable_ts: bool = False,
     output_dir: str | None = None,
+    fast: bool = False,
 ) -> None:
     """
     Full build: load config → render pipeline → MP4 + thumbnail + metadata.
@@ -55,7 +56,7 @@ def run_build(
 
     # ── Run pipeline ─────────────────────────────────────────────────────────
     try:
-        result = run_pipeline(config, use_stable_ts=stable_ts)
+        result = run_pipeline(config, use_stable_ts=stable_ts, fast=fast)
     except ForgeError as e:
         console.print(f"\n[bold red]✗ Build failed:[/]\n{e}")
         sys.exit(1)

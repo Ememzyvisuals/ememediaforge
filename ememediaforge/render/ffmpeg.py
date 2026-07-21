@@ -1,11 +1,22 @@
 """
 EmemediaForge — FFmpeg subprocess wrapper.
+
+Key design: stderr is drained in a background thread to prevent the
+classic pipe buffer deadlock:
+
+  FFmpeg fills stderr buffer (64KB default)
+  → FFmpeg blocks waiting for parent to read stderr
+  → Parent blocks writing frames to stdin
+  → Deadlock — hangs forever
+
+The background thread drains stderr continuously so FFmpeg never blocks.
 """
 
 from __future__ import annotations
 
 import shutil
 import subprocess
+import threading
 from pathlib import Path
 
 from ememediaforge.core.exceptions import FFmpegError
@@ -38,27 +49,26 @@ def build_video_cmd(
     fps: int,
     audio_timings: list[tuple[str, float]],
     output_path: Path,
+    fast: bool = False,
 ) -> list[str]:
     """
     Build the FFmpeg command to encode raw RGB frames + mixed audio.
 
     Parameters
     ----------
-    width, height   : video resolution
-    fps             : frames per second
-    audio_timings   : list of (audio_file_path, start_time_seconds)
-    output_path     : destination MP4 path
-
-    Returns
-    -------
-    list[str] — the complete ffmpeg command
+    width, height  : video resolution
+    fps            : frames per second
+    audio_timings  : list of (audio_file_path, start_time_seconds)
+    output_path    : destination MP4 path
+    fast           : use ultrafast preset (for CI/testing)
     """
     ffmpeg = check_ffmpeg()
+    preset = "ultrafast" if fast else "fast"
 
     cmd = [
         ffmpeg,
         "-y",
-        # Video input from stdin (raw RGB24)
+        # Video from stdin (raw RGB24 frames)
         "-f",
         "rawvideo",
         "-vcodec",
@@ -73,23 +83,23 @@ def build_video_cmd(
         "pipe:0",
     ]
 
-    # Add audio inputs
+    # Add each audio input
     for audio_path, _ in audio_timings:
         cmd.extend(["-i", str(audio_path)])
 
-    # Build filter_complex for audio delay + mix
+    # Audio delay + mix filter
     if audio_timings:
-        filter_parts: list[str] = []
+        parts: list[str] = []
         for i, (_, start_t) in enumerate(audio_timings):
             delay_ms = int(start_t * 1000)
-            filter_parts.append(f"[{i + 1}:a]adelay={delay_ms}|{delay_ms},apad[a{i}]")
+            parts.append(f"[{i + 1}:a]adelay={delay_ms}|{delay_ms},apad[a{i}]")
         n = len(audio_timings)
         mix_in = "".join(f"[a{i}]" for i in range(n))
-        filter_parts.append(f"{mix_in}amix=inputs={n}:normalize=0:dropout_transition=0[aout]")
+        parts.append(f"{mix_in}amix=inputs={n}:normalize=0:dropout_transition=0[aout]")
         cmd.extend(
             [
                 "-filter_complex",
-                ";".join(filter_parts),
+                ";".join(parts),
                 "-map",
                 "0:v",
                 "-map",
@@ -104,7 +114,7 @@ def build_video_cmd(
             "-c:v",
             "libx264",
             "-preset",
-            "fast",
+            preset,
             "-crf",
             "18",
             "-pix_fmt",
@@ -126,8 +136,10 @@ def build_video_cmd(
 
 class FFmpegEncoder:
     """
-    Context manager that opens an FFmpeg subprocess accepting raw RGB frames
-    on stdin and writes the encoded MP4 to disk.
+    Context manager that streams raw RGB frames to FFmpeg via stdin.
+
+    Stderr is drained continuously in a background daemon thread,
+    preventing the pipe buffer deadlock that causes indefinite hangs.
 
     Usage:
         with FFmpegEncoder(cmd) as enc:
@@ -138,34 +150,62 @@ class FFmpegEncoder:
     def __init__(self, cmd: list[str]):
         self.cmd = cmd
         self._proc: subprocess.Popen | None = None
+        self._stderr_lines: list[str] = []
+        self._stderr_thread: threading.Thread | None = None
 
     def __enter__(self) -> FFmpegEncoder:
         self._proc = subprocess.Popen(
             self.cmd,
             stdin=subprocess.PIPE,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
+            stderr=subprocess.PIPE,  # piped so we can capture errors
         )
+
+        # ── Drain stderr in background — prevents pipe buffer deadlock ────────
+        def _drain_stderr() -> None:
+            assert self._proc and self._proc.stderr
+            for line in self._proc.stderr:
+                self._stderr_lines.append(line.decode(errors="replace").rstrip())
+
+        self._stderr_thread = threading.Thread(
+            target=_drain_stderr,
+            daemon=True,
+            name="ffmpeg-stderr-drain",
+        )
+        self._stderr_thread.start()
         return self
 
     def write(self, frame_bytes: bytes) -> None:
-        if self._proc and self._proc.stdin:
-            try:
-                self._proc.stdin.write(frame_bytes)
-            except BrokenPipeError as e:
-                stderr = (
-                    self._proc.stderr.read().decode(errors="replace") if self._proc.stderr else ""
-                )
-                raise FFmpegError(f"FFmpeg pipe broken:\n{stderr}") from e
+        """Write one frame's raw RGB bytes to FFmpeg stdin."""
+        if not (self._proc and self._proc.stdin):
+            return
+        try:
+            self._proc.stdin.write(frame_bytes)
+        except BrokenPipeError as e:
+            # FFmpeg died — collect stderr and raise a clean error
+            if self._stderr_thread:
+                self._stderr_thread.join(timeout=3)
+            stderr = "\n".join(self._stderr_lines[-20:])  # last 20 lines
+            raise FFmpegError(f"FFmpeg pipe broken:\n{stderr}") from e
 
     def __exit__(self, *_) -> None:
         if not self._proc:
             return
+
+        # Close stdin to signal end of stream
         if self._proc.stdin:
-            self._proc.stdin.close()
+            try:
+                self._proc.stdin.close()
+            except BrokenPipeError:
+                pass
+
+        # Wait for FFmpeg to finish encoding
         self._proc.wait()
+
+        # Let stderr thread finish collecting output
+        if self._stderr_thread:
+            self._stderr_thread.join(timeout=10)
+
         if self._proc.returncode != 0:
-            stderr = (self._proc.stderr.read() if self._proc.stderr else b"").decode(
-                errors="replace"
-            )
+            stderr = "\n".join(self._stderr_lines[-30:])
             raise FFmpegError(f"FFmpeg exited with code {self._proc.returncode}:\n{stderr}")
