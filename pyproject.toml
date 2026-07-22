@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name        = "ememediaforge"
-version     = "1.0.0"
+version     = "1.0.3"
 description = "Professional showcase video generator for Speech AI models"
 readme      = "README.md"
 license     = { file = "LICENSE" }

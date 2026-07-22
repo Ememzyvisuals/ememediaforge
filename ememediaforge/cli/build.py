@@ -8,9 +8,7 @@ import sys
 
 from rich.console import Console
 
-from ememediaforge.config.loader import load_config
 from ememediaforge.core.exceptions import ForgeError
-from ememediaforge.core.pipeline import run_pipeline
 from ememediaforge.render.ffmpeg import FFmpegError, check_ffmpeg
 
 console = Console()
@@ -30,8 +28,12 @@ def run_build(
     config_path : path to project.yaml
     stable_ts   : use stable-ts for higher-quality word alignment
     output_dir  : override output directory from config
+    fast        : use ultrafast FFmpeg preset (CI, Kaggle, quick previews)
     """
-    # ── Pre-flight checks ────────────────────────────────────────────────────
+    from ememediaforge.config.loader import load_config
+    from ememediaforge.core.pipeline import run_pipeline
+
+    # ── Pre-flight FFmpeg check ──────────────────────────────────────────────
     try:
         check_ffmpeg()
     except FFmpegError as e:
@@ -39,6 +41,8 @@ def run_build(
         sys.exit(1)
 
     console.print("\n[bold magenta]EmemediaForge[/] [dim]— Speech AI Showcase Generator[/]")
+    if fast:
+        console.print("[dim]  Mode: fast (ultrafast FFmpeg preset)[/]")
     console.print(f"[dim]Building[/] [bold cyan]{config_path}[/]\n")
 
     # ── Load config ──────────────────────────────────────────────────────────
@@ -48,11 +52,10 @@ def run_build(
         console.print(f"[bold red]✗ Config error:[/]\n{e}")
         sys.exit(1)
 
-    # Override output dir if provided
     if output_dir:
-        from pathlib import Path as _Path
+        from pathlib import Path
 
-        config.output_dir = _Path(output_dir)
+        config.output_dir = Path(output_dir)
 
     # ── Run pipeline ─────────────────────────────────────────────────────────
     try:

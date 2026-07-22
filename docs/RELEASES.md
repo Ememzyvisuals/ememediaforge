@@ -1,13 +1,13 @@
 # EmemediaForge — Releases & Installation Guide
 
-No PyPI. Distribution is via GitHub Releases only.
+Distribution is via GitHub Releases only — no PyPI.
 GitHub Actions builds and publishes everything automatically on `git tag` push.
 
 ---
 
 ## Installing EmemediaForge
 
-### Option 1 — git clone (recommended)
+### Option 1 — git clone (recommended for development)
 
 ```bash
 git clone https://github.com/Ememzyvisuals/ememediaforge.git
@@ -16,29 +16,32 @@ pip install .
 forge version
 ```
 
-For development (editable install — changes reflect immediately):
+Editable install (changes to source reflect immediately):
 ```bash
 pip install -e ".[dev]"
 ```
 
-### Option 2 — pip direct from a GitHub Release
+### Option 2 — pip direct from latest GitHub Release
 
-No git required. Go to the [Releases page](https://github.com/Ememzyvisuals/ememediaforge/releases),
-copy the `.whl` URL, then:
+No git required. Always installs the latest stable version:
 
 ```bash
-pip install https://github.com/Ememzyvisuals/ememediaforge/releases/download/v1.0.0/ememediaforge-1.0.0-py3-none-any.whl
+pip install https://github.com/Ememzyvisuals/ememediaforge/releases/latest/download/ememediaforge-py3-none-any.whl
 ```
 
-### Option 3 — pip from git (always latest main)
+Or pin to a specific version:
+```bash
+pip install https://github.com/Ememzyvisuals/ememediaforge/releases/download/v1.0.3/ememediaforge-1.0.3-py3-none-any.whl
+```
+
+### Option 3 — pip from git tag
 
 ```bash
+# Latest main branch
 pip install git+https://github.com/Ememzyvisuals/ememediaforge.git
-```
 
-Pin to a specific tag:
-```bash
-pip install git+https://github.com/Ememzyvisuals/ememediaforge.git@v1.0.1
+# Specific version tag
+pip install git+https://github.com/Ememzyvisuals/ememediaforge.git@v1.0.3
 ```
 
 ### Option 4 — Kaggle / Colab
@@ -46,60 +49,79 @@ pip install git+https://github.com/Ememzyvisuals/ememediaforge.git@v1.0.1
 ```python
 !apt install ffmpeg -y -q
 !pip install git+https://github.com/Ememzyvisuals/ememediaforge.git -q
+!forge build project.yaml --fast   # always use --fast on shared CPU
 ```
 
 ---
 
-## Releasing a New Version (You)
+## Releasing a New Version
 
-Everything is automated. Three commands:
+Three commands — GitHub Actions handles everything else:
 
 ```bash
-# 1. Commit your changes
+# 1. Commit changes
 git add .
-git commit -m "feat: add Igbo language support"
+git commit -m "feat: your change here"
 
-# 2. Push code
+# 2. Push
 git push origin main --force
 
-# 3. Tag the release — this triggers everything
-git tag v1.0.1
-git push origin v1.0.1 --force
+# 3. Tag — triggers the full release pipeline
+git tag v1.0.4
+git push origin v1.0.4 --force
 ```
 
-GitHub Actions then:
-- Runs all 22 tests (blocks if any fail)
-- Builds `.whl` + `.tar.gz`
-- Creates the GitHub Release with auto-changelog
-- Attaches the wheel so users can `pip install` from the URL
+Or with the Makefile shortcut:
+```bash
+make release v=1.0.4
+```
 
-Done. Takes ~4 minutes.
+**What GitHub Actions does:**
+1. Runs 22 tests across Python 3.10 / 3.11 / 3.12 (blocks if any fail)
+2. Builds `.whl` + `.tar.gz`, version synced from the tag
+3. Generates a NaijaVox 2.0 demo video using `forge build --fast`
+4. Creates a GitHub Release with:
+   - Auto-generated changelog from conventional commits
+   - `.whl` and `.tar.gz` attached
+   - `demo.mp4`, `thumbnail.png`, `metadata.json` attached
 
----
-
-## Versioning
-
-Follows [Semantic Versioning](https://semver.org/):
-
-| Change type | Example | Tag |
-|-------------|---------|-----|
-| Bug fix | Fix waveform crash on short audio | `v1.0.1` |
-| New feature | Add `ocean` theme | `v1.1.0` |
-| Breaking change | New YAML config format | `v2.0.0` |
-| Beta / testing | New template preview | `v1.1.0-beta.1` |
-
-Pre-release tags (`-beta`, `-rc`, `-alpha`) are marked as pre-release
-on GitHub and **won't** show as the latest version to users. Safe to ship.
+Total time: ~5–7 minutes from tag push to live release.
 
 ---
 
-## Make Commands
+## Pre-releases (beta, RC)
 
 ```bash
-make install      # pip install -e ".[dev]"
-make test         # pytest
-make test-cov     # pytest + coverage report
-make lint         # ruff check
-make release v=1.0.1        # commit + tag + push in one command
+git tag v1.1.0-beta.1
+git push origin v1.1.0-beta.1 --force
+```
+
+Tags containing `-` are automatically marked as **pre-release** on GitHub and
+won't show as the latest version to users installing from releases.
+
+---
+
+## Version history
+
+| Version | Date | Highlights |
+|---------|------|------------|
+| v1.0.3 | 2026-07-22 | Fix `--fast` not registered in Typer CLI signature |
+| v1.0.2 | 2026-07-22 | Add `--fast` flag; fix FFmpeg stderr deadlock (6h CI hang) |
+| v1.0.1 | 2026-07-21 | Fix 80 ruff errors; CI now passes lint step |
+| v1.0.0 | 2026-07-20 | Initial release |
+
+Full details: [CHANGELOG.md](../CHANGELOG.md)
+
+---
+
+## Make commands
+
+```bash
+make install           # pip install -e ".[dev]"
+make test              # pytest
+make test-cov          # pytest + coverage report
+make lint              # ruff check
+make format            # ruff format
+make release v=1.0.4   # bump version + commit + tag + push
 make release-beta v=1.1.0-beta.1
 ```

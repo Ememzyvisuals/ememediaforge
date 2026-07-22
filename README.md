@@ -5,6 +5,7 @@
 **Turn any Speech AI model into a polished showcase video — with one command.**
 
 [![CI](https://github.com/Ememzyvisuals/ememediaforge/actions/workflows/ci.yml/badge.svg)](https://github.com/Ememzyvisuals/ememediaforge/actions)
+[![Release](https://img.shields.io/github/v/release/Ememzyvisuals/ememediaforge)](https://github.com/Ememzyvisuals/ememediaforge/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://github.com/Ememzyvisuals/ememediaforge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built by @Ememzyvisuals](https://img.shields.io/badge/built%20by-%40Ememzyvisuals-8B5CF6)](https://github.com/Ememzyvisuals)
@@ -142,12 +143,12 @@ pip install .
 
 **Or install directly from a release (no git required):**
 ```bash
-pip install https://github.com/Ememzyvisuals/ememediaforge/releases/download/v1.0.0/ememediaforge-1.0.0-py3-none-any.whl
+pip install https://github.com/Ememzyvisuals/ememediaforge/releases/latest/download/ememediaforge-py3-none-any.whl
 ```
 
 **Or pin to a specific version:**
 ```bash
-pip install git+https://github.com/Ememzyvisuals/ememediaforge.git@v1.0.0
+pip install git+https://github.com/Ememzyvisuals/ememediaforge.git@v1.0.3
 ```
 
 ---
@@ -325,11 +326,25 @@ See [`docs/ALIGNMENT.md`](docs/ALIGNMENT.md) for full details.
 
 All rendering runs on CPU. No GPU required.
 
+### Default mode (`forge build`)
+
 | Video Length | Samples | Approx. Render Time |
 |-------------|---------|---------------------|
 | ~10s | 2 | 30–60 seconds |
 | ~30s | 4 | 2–3 minutes |
 | ~60s | 6 | 5–8 minutes |
+
+### Fast mode (`forge build --fast`)
+
+Uses FFmpeg's `ultrafast` preset. Encodes 5–10× faster with almost no visible quality difference at web resolutions. File size is slightly larger.
+
+| Video Length | Samples | Approx. Render Time |
+|-------------|---------|---------------------|
+| ~10s | 2 | 5–10 seconds |
+| ~30s | 4 | 20–40 seconds |
+| ~60s | 6 | 60–90 seconds |
+
+**Use `--fast` whenever you are:** in CI/CD, on Kaggle or Colab, iterating quickly, or generating a preview before the final export.
 
 Render time scales with video duration × resolution. `1280×720` renders roughly 2× faster than `1080×1080`.
 
@@ -385,7 +400,7 @@ Generate all three from the same audio — just change `resolution:` and run aga
 ## Troubleshooting
 
 ### Build hangs and never completes
-This was a known bug in early versions caused by a deadlock in the FFmpeg stderr pipe. It is fixed as of v1.0.0. If you are on an older version, update:
+This was a bug caused by a deadlock in the FFmpeg stderr pipe — stderr filled its 64KB buffer, FFmpeg froze waiting for it to drain, our frame writer froze waiting for FFmpeg, and the whole process hung indefinitely. Fixed in v1.0.2 by draining stderr in a background thread. If you are on an older version, update:
 ```bash
 git pull origin main && pip install -e .
 ```

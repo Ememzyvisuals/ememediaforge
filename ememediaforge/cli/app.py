@@ -5,6 +5,7 @@ Commands:
   forge init               Scaffold a new project
   forge validate <config>  Validate config without building
   forge build <config>     Full render pipeline
+  forge version            Print version
 """
 
 from __future__ import annotations
@@ -63,24 +64,41 @@ def cmd_build(
     config: str = typer.Argument(..., help="Path to project.yaml"),
     stable_ts: bool = typer.Option(
         False,
-        "--stable-ts / --no-stable-ts",
-        help="Use stable-ts for higher-accuracy word alignment (requires: pip install ememediaforge[stable_ts])",
+        "--stable-ts",
+        help=(
+            "Use stable-ts (Whisper-tiny) for higher-accuracy word alignment. "
+            "Requires: pip install 'ememediaforge[stable_ts]'"
+        ),
     ),
     output: str | None = typer.Option(
-        None, "--output", "-o", help="Override output directory from config (default: dist/)"
+        None,
+        "--output",
+        "-o",
+        help="Override output directory from config (default: dist/)",
+    ),
+    fast: bool = typer.Option(
+        False,
+        "--fast",
+        help=(
+            "Use FFmpeg ultrafast preset — 5-10x faster encode, slightly larger file. "
+            "Recommended for CI, Kaggle, Colab, and quick previews."
+        ),
     ),
 ) -> None:
     """
     Build a professional showcase video from project.yaml.
 
     Outputs:
-      dist/demo.mp4        — Final video
-      dist/thumbnail.png   — Static thumbnail
-      dist/metadata.json   — Build metadata
+
+      dist/demo.mp4        Final video
+
+      dist/thumbnail.png   Static thumbnail
+
+      dist/metadata.json   Build metadata
     """
     from ememediaforge.cli.build import run_build
 
-    run_build(config, stable_ts=stable_ts, output_dir=output, fast=fast)  # noqa: F821
+    run_build(config, stable_ts=stable_ts, output_dir=output, fast=fast)
 
 
 @app.command("version")
