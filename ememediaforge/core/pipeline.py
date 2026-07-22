@@ -38,6 +38,7 @@ def run_pipeline(
     config: ProjectConfig,
     use_stable_ts: bool = False,
     on_progress: Callable[[int, int], None] | None = None,
+    fast: bool = False,
 ) -> dict:
     """
     Run the full EmemediaForge build pipeline.
@@ -47,6 +48,7 @@ def run_pipeline(
     config        : validated ProjectConfig
     use_stable_ts : if True, attempt to use stable-ts for alignment
     on_progress   : optional callback(current_frame, total_frames)
+    fast          : if True, use FFmpeg ultrafast preset for faster encoding
 
     Returns
     -------
@@ -129,7 +131,7 @@ def run_pipeline(
             fps=config.fps,
             output_path=mp4_path,
             on_progress=_on_progress,
-            fast=fast,  # noqa: F821
+            fast=fast,
         )
 
     # ── Step 7: Thumbnail ────────────────────────────────────────────────────
